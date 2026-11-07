@@ -2,7 +2,7 @@
 id: 001
 title: Core budget logic
 depends_on: []
-status: todo
+status: done
 ---
 
 ## Goal
