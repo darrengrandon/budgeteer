@@ -11,6 +11,7 @@ status: todo
 - First run: choose the split (default 50/30/20). Cannot continue until it totals 100.
 - Log a paycheck (amount in dollars, date defaulting to today). Show the three
   balances and the plain sentence from SPEC.md.
+- All wording is plain and friendly for 16-19 year olds (SPEC.md Decisions 1).
 - `src/money.js` converts text to cents and back, with tests first:
   "19.99" is 1999, "0.1" is 10, "$1,234.50" is 123450, "12.345" and "abc" are errors.
 

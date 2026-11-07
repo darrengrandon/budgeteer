@@ -56,4 +56,18 @@ treat any imported backup file as untrusted.
    with a parent?
 
 ## Decisions
-(Fill in as the open questions are answered.)
+Answered by the owner on 2026-11-07.
+
+1. **Age and tone:** older teens, 16-19. Wording is plain and friendly: short
+   sentences, everyday words, a little warmth, no jokes or slang.
+   Example: "Nice. $8.50 went to your goals."
+2. **Several goals:** fill top to bottom. Each goal fills to its target before the
+   next one gets anything. The teen can move a goal up or down to set priority.
+3. **Overspending:** blocked. The message says how much is available, for example
+   "You have $12.40 left to spend."
+4. **Save target:** none in v1. Save shows a running total only.
+5. **Projection basis:** the 28-day average of paychecks (total over the window
+   divided by 4 weeks), times the Goals percent. Known and accepted: it under-counts
+   during a teen's first 4 weeks (one $200 paycheck reads as $50 a week).
+6. **Backup:** JSON download and restore only. No sharing feature; the teen can send
+   the file to a parent themselves. Nothing goes over the network.
