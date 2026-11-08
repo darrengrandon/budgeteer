@@ -12,10 +12,13 @@ import { splitIncome, isISODate, dayNumber } from './budget.js';
  * @typedef {{ id: string, name: string, targetCents: number }} Goal
  * @typedef {{ id: string, date: string, cents: number, name: string }} GoalPurchase
  *   A funded goal that was bought: cents came out of Goals; name is the goal's name.
- * @typedef {{ trackSpending: boolean }} Settings
- * @typedef {{ version: 1 | 2, split: Split, paychecks: Paycheck[], purchases: Purchase[], goals: Goal[],
+ * @typedef {'weekly' | 'biweekly' | 'twice-monthly' | 'monthly' | 'varies'} PayFrequency
+ *   The answer to "How often do you get paid?" (docs/adr/0007).
+ * @typedef {{ trackSpending: boolean, payFrequency?: PayFrequency }} Settings
+ *   Version 3 always has payFrequency; version 2 never does.
+ * @typedef {{ version: 1 | 2 | 3, split: Split, paychecks: Paycheck[], purchases: Purchase[], goals: Goal[],
  *   settings?: Settings, goalPurchases?: GoalPurchase[] }} State
- *   Version 2 always has settings and goalPurchases (docs/adr/0003). The app uses version 2.
+ *   Versions 2 and 3 always have settings and goalPurchases (docs/adr/0003). The app uses version 3.
  * @typedef {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} StorageLike
  * @typedef {{ ok: true, state: State } | { ok: false, error: string }} ValidationResult
  */
@@ -54,6 +57,9 @@ const ID_PATTERN = {
 };
 const V1_KEYS = ['version', 'split', 'paychecks', 'purchases', 'goals'];
 const V2_KEYS = ['version', 'split', 'settings', 'paychecks', 'purchases', 'goals', 'goalPurchases'];
+
+/** @type {readonly PayFrequency[]} The stored answers, in the order the app shows them. */
+export const PAY_FREQUENCIES = Object.freeze(['weekly', 'biweekly', 'twice-monthly', 'monthly', 'varies']);
 
 // ---------------------------------------------------------------------------
 // Field readers. Each one checks an untrusted value and returns a clean copy,
@@ -211,7 +217,9 @@ export function validateState(data, todayISO) {
   try {
     if (!isPlainObject(data)) throw new RangeError('The backup is not in the right format.');
     const { version } = data;
-    if (version !== 1 && version !== 2) throw new RangeError('The backup is from a different version of Budgeteer.');
+    if (version !== 1 && version !== 2 && version !== 3) {
+      throw new RangeError('The backup is from a different version of Budgeteer.');
+    }
     const top = readObject(data, version === 1 ? V1_KEYS : V2_KEYS, 'The backup');
 
     const split = readSplit(top.split, 'The split');
@@ -255,9 +263,12 @@ export function validateState(data, todayISO) {
 
     /** @type {State} */
     let state = { version: 1, split, paychecks, purchases, goals };
-    if (version === 2) {
-      const settings = readObject(top.settings, ['trackSpending'], 'The settings');
+    if (version !== 1) {
+      const settings = readObject(top.settings, version === 2 ? ['trackSpending'] : ['trackSpending', 'payFrequency'], 'The settings');
       if (typeof settings.trackSpending !== 'boolean') throw new RangeError('The tracking setting must be true or false.');
+      if (version === 3 && !PAY_FREQUENCIES.includes(/** @type {any} */ (settings.payFrequency))) {
+        throw new RangeError('The "How often do you get paid?" answer is not one Budgeteer knows.');
+      }
       const goalPurchaseIds = new Set();
       const goalPurchases = readList(top.goalPurchases, 'The goal buys').map((item, i) => {
         const where = `Goal buy ${i + 1}`;
@@ -269,9 +280,17 @@ export function validateState(data, todayISO) {
           name: readName(x.name, `${where}'s name`),
         };
       });
-      state = {
-        version: 2, split, settings: { trackSpending: settings.trackSpending }, paychecks, purchases, goals, goalPurchases,
-      };
+      state = version === 2
+        ? { version: 2, split, settings: { trackSpending: settings.trackSpending }, paychecks, purchases, goals, goalPurchases }
+        : {
+          version: 3,
+          split,
+          settings: { trackSpending: settings.trackSpending, payFrequency: /** @type {PayFrequency} */ (settings.payFrequency) },
+          paychecks,
+          purchases,
+          goals,
+          goalPurchases,
+        };
     }
     const totals = balances(state);
     if (totals.spend < 0) throw new RangeError('The purchases add up to more than was ever in Spend.');
@@ -302,7 +321,7 @@ export function newState(split = DEFAULT_SPLIT) {
  * @returns {State}
  */
 export function upgradeState(state) {
-  if (state.version === 2) return state;
+  if (state.version !== 1) return state;
   return {
     version: 2,
     split: state.split,
@@ -315,13 +334,37 @@ export function upgradeState(state) {
 }
 
 /**
+ * Turn version 1 or 2 into version 3, keeping every record (docs/adr/0007). The answer starts
+ * as "It's different every time", so the numbers stay what they were. Version 3 passes through.
+ * @param {State} state
+ * @returns {State}
+ */
+export function upgradeToV3(state) {
+  if (state.version === 3) return state;
+  const v2 = upgradeState(state);
+  return { ...v2, version: 3, settings: { trackSpending: v2.settings?.trackSpending === true, payFrequency: 'varies' } };
+}
+
+/**
+ * Save the answer to "How often do you get paid?".
+ * @param {State} state a version 3 state
+ * @param {PayFrequency} payFrequency
+ * @returns {State}
+ */
+export function setPayFrequency(state, payFrequency) {
+  if (state.version !== 3 || !state.settings) throw new RangeError('Upgrade the state to version 3 first.');
+  if (!PAY_FREQUENCIES.includes(payFrequency)) throw new RangeError('That is not one of the answers.');
+  return { ...state, settings: { ...state.settings, payFrequency } };
+}
+
+/**
  * Turn "Track my spending" on or off. Hides or shows purchases; never deletes them.
- * @param {State} state a version 2 state
+ * @param {State} state a version 2 or 3 state
  * @param {boolean} on
  * @returns {State}
  */
 export function setTrackSpending(state, on) {
-  if (state.version !== 2) throw new RangeError('Upgrade the state to version 2 first.');
+  if (state.version === 1) throw new RangeError('Upgrade the state to version 2 first.');
   if (typeof on !== 'boolean') throw new RangeError('Tracking must be true or false.');
   return { ...state, settings: { ...state.settings, trackSpending: on } };
 }

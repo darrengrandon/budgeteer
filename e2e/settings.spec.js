@@ -180,7 +180,7 @@ test('a downloaded backup restores on a new phone from the first screen', async 
   expect(download.suggestedFilename()).toBe('budgeteer-backup-2026-11-07.json');
   const file = testInfo.outputPath('backup.json');
   await download.saveAs(file);
-  expect(JSON.parse(await readFile(file, 'utf8')).version).toBe(2);
+  expect(JSON.parse(await readFile(file, 'utf8')).version).toBe(3);
 
   const fresh = await browser.newContext({ viewport: page.viewportSize(), timezoneId: 'America/Chicago' });
   const phone = await fresh.newPage();
@@ -205,8 +205,8 @@ test('an old (version 1) backup restores with nothing lost, and tracking turns o
   await restoreFile(page, 'old.json', JSON.stringify(old), 'Restore a backup');
   await expect(page.getByText('Backup restored: 1 paycheck, 1 purchase, 1 goal and 0 goal buys.')).toBeVisible();
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY);
-  expect(saved.version).toBe(2);
-  expect(saved.settings).toEqual({ trackSpending: true });
+  expect(saved.version).toBe(3);
+  expect(saved.settings).toEqual({ trackSpending: true, payFrequency: 'varies' });
   expect(saved.purchases).toEqual(old.purchases);
   const sheet = await openSettings(page);
   await expect(sheet.locator('#history')).toContainText('Snack');

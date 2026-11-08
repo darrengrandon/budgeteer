@@ -6,7 +6,7 @@ import {
   DAMAGED_WARNING,
   STORAGE_KEY,
   newState,
-  upgradeState,
+  upgradeToV3,
   loadState,
   readSaved,
   saveChecked,
@@ -194,7 +194,7 @@ const storage = deviceStorage();
 let lastSaved = readSaved(storage);
 const loaded = loadState(storage);
 /** @type {State | null} */
-let state = loaded.state ? upgradeState(loaded.state) : null;
+let state = loaded.state ? upgradeToV3(loaded.state) : null;
 /** Saved text that couldn't be read, kept so the teen can download it and get help. */
 const unreadable = loaded.warning === DAMAGED_WARNING && typeof lastSaved === 'string' ? lastSaved : null;
 showNotice(loaded.warning, unreadable !== null);
@@ -233,7 +233,7 @@ function reloadFromStorage() {
   lastSaved = readSaved(storage);
   const fresh = loadState(storage);
   // Adopt it if it loaded, or if the other tab cleared everything. Keep ours if it can't be read.
-  if (fresh.state || fresh.warning === null) state = fresh.state ? upgradeState(fresh.state) : null;
+  if (fresh.state || fresh.warning === null) state = fresh.state ? upgradeToV3(fresh.state) : null;
   render();
 }
 
@@ -262,7 +262,7 @@ for (const input of [welcomeName, welcomePrice]) {
 
 /** @param {State} first */
 function startWith(first) {
-  if (!commit(first)) return;
+  if (!commit(upgradeToV3(first))) return;
   openPaySheet(true);
 }
 
@@ -1111,7 +1111,7 @@ backupFile.addEventListener('change', async () => {
   if (!firstRun && !window.confirm('Restoring replaces everything in Budgeteer right now with what is in the backup. Go ahead?')) {
     return;
   }
-  const restored = upgradeState(result.state);
+  const restored = upgradeToV3(result.state);
   if (!commit(restored)) return;
   const message = `Backup restored: ${count(restored.paychecks.length, 'paycheck')}, `
     + `${count(restored.purchases.length, 'purchase')}, ${count(restored.goals.length, 'goal')} `

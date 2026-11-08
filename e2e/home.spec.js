@@ -139,9 +139,9 @@ test('data from the old version opens with nothing lost', async ({ page }) => {
   await expect(page.locator('.goal-card').first()).toContainText('$40 of $300');
   await logPaycheck(page, '10');
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY);
-  expect(saved.version).toBe(2);
+  expect(saved.version).toBe(3);
   expect(saved.purchases).toEqual([{ id: 'b1', date: '2026-11-06', cents: 500, note: 'Snack' }]);
-  expect(saved.settings).toEqual({ trackSpending: true });
+  expect(saved.settings).toEqual({ trackSpending: true, payFrequency: 'varies' });
 });
 
 test('two open tabs never erase each other', async ({ page }) => {

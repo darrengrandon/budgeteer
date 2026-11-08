@@ -195,7 +195,7 @@ test('f: backup and restore, and clearing site data', async ({ page, story }, te
   await page.getByRole('button', { name: 'Download backup' }).click();
   const file = testInfo.outputPath('backup.json');
   await (await downloadPromise).saveAs(file);
-  expect(JSON.parse(await readFile(file, 'utf8')).version).toBe(2);
+  expect(JSON.parse(await readFile(file, 'utf8')).version).toBe(3);
   await page.getByRole('button', { name: 'Done' }).click();
   await story.caption('Her browser clears the site data');
   await page.evaluate(() => localStorage.clear());

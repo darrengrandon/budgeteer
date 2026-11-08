@@ -129,13 +129,13 @@ export function whatIf(state, todayISO, goalsPercent) {
  * Buy it (SPEC.md decisions 7 and 8): record that a fully saved goal was bought.
  * The real price comes out of Goals, but never more than the goal's price; if it cost less,
  * the rest stays in Goals for the next goal. The goal is removed and a goal purchase kept.
- * @param {State} state a version 2 state
+ * @param {State} state a version 2 or 3 state
  * @param {string} goalId
  * @param {{ cents: number, date: string }} purchase the real price and the day
  * @returns {State}
  */
 export function buyGoal(state, goalId, { cents, date }) {
-  if (state.version !== 2 || !state.goalPurchases) throw new RangeError('Upgrade the state to version 2 first.');
+  if (state.version === 1 || !state.goalPurchases) throw new RangeError('Upgrade the state to version 2 first.');
   const index = state.goals.findIndex((g) => g.id === goalId);
   if (index === -1) throw new RangeError(`No goal with id ${goalId}`);
   const goal = state.goals[index];
