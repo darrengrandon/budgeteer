@@ -2,7 +2,7 @@
 id: 007
 title: Phone layout, dark mode, backup buttons
 depends_on: [003, 004, 005, 006]
-status: todo
+status: done
 ---
 
 ## Goal

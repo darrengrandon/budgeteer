@@ -8,6 +8,7 @@
   --muted: #555b70;
   --border: #d5d8e3;
   --input-bg: #ffffff;
+  --input-border: #7c8196;
   --accent: #3d4bd6;
   --accent-text: #ffffff;
   --focus: #1f6feb;
@@ -32,6 +33,7 @@
     --muted: #a9aec2;
     --border: #3a3e52;
     --input-bg: #262938;
+    --input-border: #7d829a;
     --accent: #8b95ff;
     --accent-text: #10122a;
     --focus: #9cc2ff;
@@ -155,7 +157,7 @@ input[type="date"] {
   min-width: 0;
   min-height: 2.75rem;
   padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
   background: var(--input-bg);
 }
@@ -271,24 +273,27 @@ button.danger {
 
 /* Buckets */
 
+/* One row per bucket: name on the left, amount on the right, so any amount fits on a phone. */
 .buckets {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .bucket {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.65rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name amount"
+    "pct amount";
+  align-items: center;
+  column-gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
   border-radius: 10px;
   border: 1px solid var(--border);
-  border-top: 5px solid var(--bucket-color);
-  min-width: 0;
+  border-left: 6px solid var(--bucket-color);
 }
 
 .bucket-spend { --bucket-color: var(--spend); }
@@ -296,20 +301,28 @@ button.danger {
 .bucket-goals { --bucket-color: var(--goals); }
 
 .bucket-name {
-  font-weight: 600;
-  color: var(--muted);
-  font-size: 0.9rem;
+  grid-area: name;
+  font-weight: 700;
 }
 
 .bucket-amount {
-  font-size: 1.15rem;
+  grid-area: amount;
+  font-size: 1.35rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .bucket-pct {
+  grid-area: pct;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+}
+
+/* Money never breaks across lines. */
+.bucket-amount,
+.history-amount {
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 /* Recent activity */
@@ -322,8 +335,9 @@ button.danger {
 
 .history li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.25rem 0.75rem;
   padding: 0.6rem 0;
   border-top: 1px solid var(--border);
 }
@@ -333,7 +347,7 @@ button.danger {
 }
 
 .history-text {
-  flex: 1;
+  flex: 1 1 8rem;
   min-width: 0;
   display: flex;
   flex-direction: column;

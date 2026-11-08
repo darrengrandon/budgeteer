@@ -22,6 +22,7 @@ import {
   removeGoal,
   moveGoal,
   LIMITS,
+  backupFileName,
 } from '../src/storage.js';
 
 /** A fake localStorage that keeps items in a Map. */
@@ -448,4 +449,10 @@ test('moveGoal moves a goal up or down, and does nothing past the ends', () => {
   assert.equal(names(moveGoal(state, id('A'), -1)), 'ABC');
   assert.equal(names(moveGoal(state, id('C'), 1)), 'ABC');
   assert.throws(() => moveGoal(state, 'g99', 1), RangeError);
+});
+
+// Backup file name (ticket 007)
+
+test('backupFileName puts the date in the name so backups sort in order', () => {
+  assert.equal(backupFileName('2026-11-07'), 'budgeteer-backup-2026-11-07.json');
 });

@@ -1,11 +1,17 @@
 // @ts-check
 // Browser tests for Budgeteer. ./check.sh runs these once @playwright/test is installed.
+import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 
 // Keep Playwright's browsers inside this project instead of ~/.cache. This runs before any
 // test worker starts, so the workers inherit it. Install them with: npm run setup:browsers
 process.env.PLAYWRIGHT_BROWSERS_PATH ||= fileURLToPath(new URL('./.playwright-browsers', import.meta.url));
+
+// Browser profiles and downloads are temporary files. Keep those inside the project too.
+const tmp = fileURLToPath(new URL('./.playwright-tmp', import.meta.url));
+mkdirSync(tmp, { recursive: true });
+process.env.TMPDIR = tmp;
 
 const PORT = 8137;
 const BASE_URL = `http://127.0.0.1:${PORT}`;

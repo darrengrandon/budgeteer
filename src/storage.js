@@ -544,3 +544,12 @@ export function importBackup(text) {
   }
   return validateState(data);
 }
+
+/**
+ * A file name for a backup, with the date so backups sort in order.
+ * @param {string} todayISO
+ * @returns {string}
+ */
+export function backupFileName(todayISO) {
+  return `budgeteer-backup-${todayISO}.json`;
+}

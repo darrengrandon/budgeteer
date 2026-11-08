@@ -20,6 +20,10 @@ import {
   setSplit,
   balances,
   paycheckParts,
+  exportBackup,
+  importBackup,
+  backupFileName,
+  LIMITS,
 } from './storage.js';
 import { formatCents, centsToInput } from './money.js';
 import { localISODate } from './budget.js';
@@ -532,6 +536,74 @@ function renderWhatIf(current) {
 }
 
 // ---------------------------------------------------------------------------
+// Backup: download the records as a file, or restore them from one.
+// A restored file is untrusted: importBackup checks every field before anything changes.
+
+const backupFile = inputEl('backup-file');
+
+el('backup-download').addEventListener('click', () => {
+  if (!state) return;
+  clearMessages();
+  const blob = new Blob([exportBackup(state)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = backupFileName(localISODate());
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  el('backup-result').textContent = 'Backup downloaded. Keep the file somewhere safe.';
+});
+
+function chooseBackupFile() {
+  clearMessages();
+  backupFile.value = '';
+  backupFile.click();
+}
+el('backup-restore').addEventListener('click', chooseBackupFile);
+el('setup-restore-button').addEventListener('click', chooseBackupFile);
+
+backupFile.addEventListener('change', async () => {
+  const file = backupFile.files?.[0];
+  if (!file) return;
+  const errorId = state === null || editingSplit ? 'setup-restore-error' : 'backup-error';
+  const fail = (/** @type {string} */ reason) => {
+    el(errorId).textContent = `That file couldn't be restored, so nothing was changed. ${reason}`;
+  };
+
+  if (file.size > LIMITS.maxBackupChars) {
+    fail('It is too big to be a Budgeteer backup.');
+    return;
+  }
+  let text;
+  try {
+    text = await file.text();
+  } catch {
+    fail("The file couldn't be read.");
+    return;
+  }
+  const result = importBackup(text);
+  if (!result.ok) {
+    fail(result.error);
+    return;
+  }
+  if (state && !window.confirm('Restoring replaces everything in Budgeteer right now with what is in the backup. Go ahead?')) {
+    return;
+  }
+
+  const restored = result.state;
+  editingSplit = false;
+  trialGoals = null;
+  resetGoalForm();
+  commit(restored);
+  const count = (/** @type {number} */ n, /** @type {string} */ word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  el('backup-result').textContent = `Backup restored: ${count(restored.paychecks.length, 'paycheck')}, `
+    + `${count(restored.purchases.length, 'purchase')} and ${count(restored.goals.length, 'goal')}.`;
+  el('backup-title').focus();
+});
+
+// ---------------------------------------------------------------------------
 // Recent activity, with Remove buttons to fix mistakes
 
 const HISTORY_LIMIT = 20;
@@ -612,6 +684,7 @@ function render() {
     : 'This only changes paychecks you log from now on. The ones you already logged keep their split.';
   el('split-submit').textContent = state === null ? 'Start budgeting' : 'Save split';
   el('split-cancel').hidden = state === null;
+  el('setup-restore').hidden = state !== null;
 
   if (!state) return;
   const totals = balances(state);

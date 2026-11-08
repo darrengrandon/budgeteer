@@ -55,7 +55,17 @@
           <button type="button" id="split-cancel" hidden>Cancel</button>
         </div>
       </form>
+      <div id="setup-restore" class="subform">
+        <p>Used Budgeteer before and saved a backup?</p>
+        <div class="actions">
+          <button type="button" id="setup-restore-button">Restore a backup</button>
+        </div>
+        <p id="setup-restore-error" class="error" role="alert"></p>
+      </div>
     </section>
+
+    <!-- One file picker, used by both "Restore" buttons. -->
+    <input type="file" id="backup-file" accept=".json,application/json" aria-label="Backup file to restore" hidden>
 
     <!-- The main app, once a split is chosen. -->
     <div id="main" hidden>
@@ -194,6 +204,18 @@
         <p id="history-more" class="hint" hidden></p>
         <p id="history-error" class="error" role="alert"></p>
         <p id="history-result" class="result" role="status"></p>
+      </section>
+
+      <section class="card" aria-labelledby="backup-title">
+        <h2 id="backup-title" tabindex="-1">Backup</h2>
+        <p>Your info is saved only on this device. Download a backup now and then, so you don't lose it if you
+          clear your browser or get a new phone.</p>
+        <div class="actions">
+          <button type="button" id="backup-download">Download backup</button>
+          <button type="button" id="backup-restore">Restore backup</button>
+        </div>
+        <p id="backup-error" class="error" role="alert"></p>
+        <p id="backup-result" class="result" role="status"></p>
       </section>
 
       <section class="card" aria-labelledby="settings-title">
