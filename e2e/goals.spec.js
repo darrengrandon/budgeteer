@@ -1,116 +1,185 @@
 // @ts-check
-// Ticket 005 in a real browser: goals fill top to bottom and the weeks change as paychecks come in.
+// Ticket 016: goals on the phone, including Buy it (SPEC.md "Buy it", decisions 7 and 8).
 import { test, expect } from '@playwright/test';
+import { open, seed, v2, welcome, logPaycheck, smallTargets, noSideScroll } from './helpers.js';
 
-test.beforeEach(async ({ page }) => {
-  await page.clock.setFixedTime(new Date('2026-11-07T10:00:00-06:00'));
-  await page.goto('/index.html');
-  await page.getByRole('button', { name: 'Start budgeting' }).click(); // 50 / 30 / 20
+/** A paycheck of $200 today: $40 in Goals. Tickets ($30) is funded; Phone ($300) has $10. */
+const twoGoals = v2({
+  paychecks: [{ id: 'p1', date: '2026-11-07', cents: 20000, spend: 50, save: 30, goals: 20 }],
+  goals: [{ id: 'g1', name: 'Tickets', targetCents: 3000 }, { id: 'g2', name: 'Phone', targetCents: 30000 }],
 });
-
-/**
- * @param {import('@playwright/test').Page} page
- * @param {string} amount
- * @param {string} date
- */
-async function logPaycheck(page, amount, date) {
-  await page.getByLabel('Take-home amount').fill(amount);
-  await page.getByLabel('Date paid').fill(date);
-  await page.getByRole('button', { name: 'Add paycheck' }).click();
-}
 
 /**
  * @param {import('@playwright/test').Page} page
  * @param {string} name
- * @param {string} target
+ * @param {string} price
  */
-async function addGoal(page, name, target) {
-  await page.getByLabel('What are you saving for?').fill(name);
-  await page.getByLabel('How much does it cost?').fill(target);
-  await page.getByRole('button', { name: 'Add goal' }).click();
+async function addGoal(page, name, price) {
+  await page.getByRole('button', { name: '+ Add a goal' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Add a goal' });
+  await sheet.getByLabel('Goal name').fill(name);
+  await sheet.getByLabel('Price').fill(price);
+  await sheet.getByRole('button', { name: 'Save goal' }).click();
+  await expect(sheet).toBeHidden();
 }
 
-test('weeks to go change as paychecks are added, and goals fill top to bottom', async ({ page }) => {
-  const goals = page.locator('#goal-list > li');
-  await expect(page.getByText('No goals yet. What are you saving up for?')).toBeVisible();
+const cards = (/** @type {import('@playwright/test').Page} */ page) => page.locator('.goal-card');
 
+test('with no goals, Home invites one; adding it shows its card and date', async ({ page }) => {
+  await open(page);
+  await welcome(page);
+  await logPaycheck(page, '200');
+  await expect(page.getByText('Saving for something? Add a goal and Budgeteer will tell you when you can buy it.')).toBeVisible();
   await addGoal(page, 'Phone', '300');
   await expect(page.getByText('Added "Phone".')).toBeVisible();
-  await expect(goals.nth(0)).toContainText('$0.00 of $300.00 saved');
-  await expect(goals.nth(0)).toContainText('Log a paycheck to see a date.');
-  await expect(goals.nth(0)).not.toContainText('Infinity');
+  await expect(cards(page).first()).toContainText('$40 of $300');
+  await expect(cards(page).first()).toContainText('Ready in about 13 weeks (around Feb 6, 2027)');
+  await expect(page.getByText('Saving for something?')).toBeHidden();
+});
 
-  // $200 today: $40 to goals. Weekly pay 200/4 = $50, 20% = $10 a week. $260 left: 26 weeks.
-  await logPaycheck(page, '200', '2026-11-07');
-  await expect(goals.nth(0)).toContainText('$40.00 of $300.00 saved');
-  await expect(goals.nth(0)).toContainText('About 26 weeks to go.');
+test('the goal sheet explains mistakes and changes nothing', async ({ page }) => {
+  await open(page);
+  await welcome(page);
+  await page.getByRole('button', { name: 'Not paid yet' }).click();
+  await page.getByRole('button', { name: '+ Add a goal' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Add a goal' });
+  await sheet.getByLabel('Price').fill('300');
+  await sheet.getByRole('button', { name: 'Save goal' }).click();
+  await expect(sheet.getByRole('alert')).toHaveText('Give your goal a name, like "New phone".');
+  await sheet.getByLabel('Goal name').fill('Phone');
+  await sheet.getByLabel('Price').fill('lots');
+  await sheet.getByRole('button', { name: 'Save goal' }).click();
+  await expect(sheet.getByRole('alert')).toHaveText("That doesn't look like an amount. Type it like 42.50.");
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  await expect(cards(page)).toHaveCount(0);
+});
 
-  // Another $200 a week ago: $80 saved, $20 a week. $220 left: 11 weeks.
-  await logPaycheck(page, '200', '2026-10-31');
-  await expect(goals.nth(0)).toContainText('$80.00 of $300.00 saved');
-  await expect(goals.nth(0)).toContainText('About 11 weeks to go.');
+test('goals fill top to bottom; a funded goal offers "Buy it"', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  await expect(cards(page).nth(0)).toContainText('$30 of $30');
+  await expect(cards(page).nth(0)).toContainText('You can buy it!');
+  await expect(page.getByRole('button', { name: 'Buy it: Tickets' })).toBeVisible();
+  await expect(cards(page).nth(1)).toContainText('$10 of $300');
+  await expect(page.getByRole('button', { name: 'Buy it: Phone' })).toHaveCount(0);
+});
 
-  // A second goal waits for the first: $350 total, $270 left at $20 a week = 13.5 -> 14 weeks.
-  await addGoal(page, 'Concert tickets', '50');
-  await expect(goals.nth(1)).toContainText('$0.00 of $50.00 saved');
-  await expect(goals.nth(1)).toContainText('About 14 weeks to go.');
+test('edit a goal: name and price change, and focus comes back to it', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  await page.getByRole('button', { name: 'Options for Phone' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Edit "Phone"' });
+  await expect(sheet.getByLabel('Goal name')).toHaveValue('Phone');
+  await expect(sheet.getByLabel('Price')).toHaveValue('300.00');
+  await sheet.getByLabel('Goal name').fill('New phone');
+  await sheet.getByLabel('Price').fill('250');
+  await sheet.getByRole('button', { name: 'Save goal' }).click();
+  await expect(cards(page).nth(1)).toContainText('New phone');
+  await expect(cards(page).nth(1)).toContainText('$10 of $250');
+  await expect(page.getByRole('button', { name: 'Options for New phone' })).toBeFocused();
+});
 
-  // Move it to the top: it takes the first $50 and is finished.
-  await page.getByRole('button', { name: 'Move Concert tickets up' }).click();
-  await expect(goals.nth(0)).toContainText('Concert tickets');
-  await expect(goals.nth(0)).toContainText('$50.00 of $50.00 saved');
-  await expect(goals.nth(0)).toContainText('Done! You saved enough for this.');
-  await expect(goals.nth(1)).toContainText('$30.00 of $300.00 saved');
-  await expect(page.getByRole('button', { name: 'Move Concert tickets down' })).toBeFocused();
+test('move a goal up: it gets Goals money first', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  await page.getByRole('button', { name: 'Options for Tickets' }).click();
+  await expect(page.getByRole('button', { name: 'Move up' })).toHaveCount(0); // already at the top
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Options for Phone' }).click();
+  await page.getByRole('button', { name: 'Move up' }).click();
+  await expect(page.getByText('Moved "Phone" up.')).toBeVisible();
+  await expect(cards(page).nth(0)).toContainText('Phone');
+  await expect(cards(page).nth(0)).toContainText('$40 of $300');
+  await expect(cards(page).nth(1)).toContainText('$0 of $30');
+});
 
-  // Rename and change the target: $250 + $50 = $300 total, $220 left: 11 weeks.
-  await page.getByRole('button', { name: 'Edit Phone' }).click();
-  await expect(page.getByLabel('What are you saving for?')).toHaveValue('Phone');
-  await expect(page.getByLabel('How much does it cost?')).toHaveValue('300.00');
-  await page.getByLabel('What are you saving for?').fill('New phone');
-  await page.getByLabel('How much does it cost?').fill('250');
-  await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(goals.nth(1)).toContainText('New phone');
-  await expect(goals.nth(1)).toContainText('About 11 weeks to go.');
-  await expect(page.getByRole('button', { name: 'Add goal' })).toBeVisible();
+test('remove a goal: it says where the money goes, and "no" keeps it', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  /** @type {string[]} */
+  const asked = [];
+  page.once('dialog', (dialog) => { asked.push(dialog.message()); dialog.dismiss(); });
+  await page.getByRole('button', { name: 'Options for Tickets' }).click();
+  await page.getByRole('button', { name: 'Remove this goal' }).click();
+  await expect(cards(page)).toHaveCount(2);
 
-  // Remove the finished goal: its money flows to the phone. $80 of $250, $170 left: 8.5 -> 9 weeks.
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Remove Concert tickets' }).click();
-  await expect(goals).toHaveCount(1);
-  await expect(goals.nth(0)).toContainText('$80.00 of $250.00 saved');
-  await expect(goals.nth(0)).toContainText('About 9 weeks to go.');
+  page.once('dialog', (dialog) => { asked.push(dialog.message()); dialog.accept(); });
+  await page.getByRole('button', { name: 'Remove this goal' }).click();
+  expect(asked).toEqual([
+    'Remove "Tickets"? The money saved for it stays in Goals and goes to "Phone" next.',
+    'Remove "Tickets"? The money saved for it stays in Goals and goes to "Phone" next.',
+  ]);
+  await expect(cards(page)).toHaveCount(1);
+  await expect(cards(page).first()).toContainText('$40 of $300');
+});
 
+test('Buy it at the goal price takes it out of Goals and removes the goal', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  await page.getByRole('button', { name: 'Buy it: Tickets' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Did you buy Tickets?' });
+  await expect(sheet.getByLabel('What did it cost?')).toHaveValue('30.00');
+  await expect(sheet.getByLabel('What did it cost?')).toHaveAttribute('inputmode', 'decimal');
+  await sheet.getByRole('button', { name: 'Yes, I bought it' }).click();
+  await expect(page.getByText('Nice! $30.00 came out of Goals for Tickets.')).toBeVisible();
+  await expect(cards(page)).toHaveCount(1);
+  await expect(cards(page).first()).toContainText('$10 of $300');
   await page.reload();
-  await expect(goals).toHaveCount(1);
-  await expect(goals.nth(0)).toContainText('New phone');
-  await expect(goals.nth(0)).toContainText('About 9 weeks to go.');
+  await expect(cards(page)).toHaveCount(1);
+  await expect(cards(page).first()).toContainText('$10 of $300');
 });
 
-test('goal form explains mistakes and money beyond every goal is pointed out', async ({ page }) => {
-  await page.getByLabel('How much does it cost?').fill('100');
-  await page.getByRole('button', { name: 'Add goal' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Give your goal a name, like "New phone".');
-
-  await page.getByLabel('What are you saving for?').fill('Shoes');
-  await page.getByLabel('How much does it cost?').fill('lots');
-  await page.getByRole('button', { name: 'Add goal' }).click();
-  await expect(page.getByRole('alert')).toHaveText("That doesn't look like an amount. Type it like 42.50.");
-  await expect(page.locator('#goal-list > li')).toHaveCount(0);
-
-  await page.getByLabel('How much does it cost?').fill('10');
-  await page.getByRole('button', { name: 'Add goal' }).click();
-  await logPaycheck(page, '100', '2026-11-07'); // $20 to goals, $10 more than Shoes needs
-  await expect(page.getByText('You have $10.00 in Goals that no goal needs right now.')).toBeVisible();
+test('Buy it for less leaves the rest for the next goal', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  await page.getByRole('button', { name: 'Buy it: Tickets' }).click();
+  await page.getByLabel('What did it cost?').fill('25');
+  await page.getByRole('button', { name: 'Yes, I bought it' }).click();
+  await expect(page.getByText('Nice! $25.00 came out of Goals for Tickets.')).toBeVisible();
+  await expect(cards(page).first()).toContainText('$15 of $300');
 });
 
-test('a split with 0% to Goals explains why there is no date', async ({ page }) => {
-  await page.getByRole('button', { name: 'Change my split' }).click();
-  await page.getByLabel('Spend %').fill('70');
-  await page.getByLabel('Goals %').fill('0');
-  await page.getByRole('button', { name: 'Save split' }).click();
-  await addGoal(page, 'Car', '5000');
-  await logPaycheck(page, '100', '2026-11-07');
-  await expect(page.locator('#goal-list > li').first())
-    .toContainText("Your split puts 0% into Goals, so this won't fill up. Change your split to get here.");
+test('Buy it for more takes only the goal price out of Goals, and says so', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  await page.getByRole('button', { name: 'Buy it: Tickets' }).click();
+  await page.getByLabel('What did it cost?').fill('45');
+  await page.getByRole('button', { name: 'Yes, I bought it' }).click();
+  await expect(page.getByText("Nice! $30.00 came out of Goals for Tickets. The extra $15.00 didn't come from Goals.")).toBeVisible();
+  await expect(cards(page).first()).toContainText('$10 of $300');
+});
+
+test('the Buy it sheet explains a bad price and changes nothing', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  await page.getByRole('button', { name: 'Buy it: Tickets' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Did you buy Tickets?' });
+  await sheet.getByLabel('What did it cost?').fill('0');
+  await sheet.getByRole('button', { name: 'Yes, I bought it' }).click();
+  await expect(sheet.getByRole('alert')).toHaveText('The amount has to be more than $0.');
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  await expect(cards(page)).toHaveCount(2);
+});
+
+test('with 0% to Goals the card says why there is no date', async ({ page }) => {
+  await open(page);
+  await seed(page, v2({
+    split: { spend: 70, save: 30, goals: 0 },
+    paychecks: [{ id: 'p1', date: '2026-11-07', cents: 20000, spend: 70, save: 30, goals: 0 }],
+    goals: [{ id: 'g1', name: 'Car', targetCents: 500000 }],
+  }));
+  await expect(cards(page).first()).toContainText('Your split puts nothing into Goals. Change it in Settings.');
+});
+
+test('goal sheets fit the phone and their targets are big enough', async ({ page }) => {
+  await open(page);
+  await seed(page, twoGoals);
+  expect(await smallTargets(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Options for Phone' }).click();
+  expect(await smallTargets(page)).toEqual([]);
+  expect(await noSideScroll(page)).toBe(true);
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Buy it: Tickets' }).click();
+  expect(await smallTargets(page)).toEqual([]);
+  expect(await noSideScroll(page)).toBe(true);
 });

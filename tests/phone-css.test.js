@@ -1,5 +1,5 @@
 // The phone stylesheet: readable contrast in both themes, and the phone-only design rules.
-// After ticket 019 the phone stylesheet becomes styles.css; this test follows it there.
+// Reads styles.css (phone.css while ticket 015-018 built the phone UI beside the old page).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';

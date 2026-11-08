@@ -1,8 +1,8 @@
 // @ts-check
-// Shared steps for the phone tests. APP moves to /index.html when ticket 019 switches over.
+// Shared steps for the phone tests.
 import { expect } from '@playwright/test';
 
-export const APP = '/phone.html';
+export const APP = '/index.html';
 /** Saturday Nov 7, 2026, morning in America/Chicago. */
 export const TODAY = new Date('2026-11-07T10:00:00-06:00');
 export const STORAGE_KEY = 'budgeteer.v1';

@@ -1,8 +1,13 @@
 # Budgeteer
 
-A budgeting tool for teens with a first job. Type in a paycheck, it splits into
-Spend / Save / Goals, and shows how many weeks until each goal. Runs in the browser,
-stores data on the device, needs no account or bank.
+"Log your paycheck. Budgeteer tells you what to spend and when you can buy your thing."
+
+A phone-only budgeting app for teens with a first job. It's an installable web app that
+works offline, with no account, no bank and no network calls; data stays on the phone.
+SPEC.md is the product, CONTEXT.md the glossary, docs/adr/ the big decisions.
+
+To try it: `python3 -m http.server 8000 --bind 127.0.0.1`, then open
+http://127.0.0.1:8000 (use your browser's phone view, about 390px wide).
 
 ## Start building (Kubuntu)
 
@@ -24,7 +29,10 @@ npm run setup:browsers   # downloads Chromium into .playwright-browsers/
 
 npm's cache (`.npm-cache/`), the browsers, and Playwright's temporary files
 (`.playwright-tmp/`) all stay inside this folder and are gitignored. The test server
-listens on 127.0.0.1 only. `e2e/teen-flow.spec.js` is the whole teen flow in one test.
+listens on 127.0.0.1 only. Every browser test runs twice, at an iPhone 15 size and a
+Pixel 9 size. Only Chromium can run here, so "iPhone" means Chromium with an iPhone
+screen and user agent, not Safari; SPEC.md lists what that leaves untested.
+`e2e/teen-flow.spec.js` is the whole lazy-teen flow in one test.
 
 ## Why it is laid out this way
 

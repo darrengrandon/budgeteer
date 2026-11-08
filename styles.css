@@ -1,4 +1,5 @@
-/* Budgeteer styles. Phone first (about 400px wide), light and dark theme from the device setting. */
+/* Budgeteer phone app. Designed for 360-430px wide; wider screens get the same column, centered.
+   Touch targets are at least 44px. Nothing depends on hover. Light and dark from the phone. */
 
 :root {
   color-scheme: light dark;
@@ -20,9 +21,9 @@
   --notice-text: #5c4100;
   --spend: #0f7b6c;
   --save: #2459c7;
-  --goals: #8a3ffc;
+  --goals: #7a2ff0;
   --track: #e3e5ee;
-  --radius: 12px;
+  --radius: 18px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -66,36 +67,53 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: 1.0625rem;
+  line-height: 1.45;
   overflow-wrap: anywhere;
+  -webkit-tap-highlight-color: transparent;
 }
 
 [hidden] {
   display: none !important;
 }
 
-.site-header,
-main {
-  max-width: 34rem;
-  margin: 0 auto;
-  padding: 0 1rem;
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.site-header {
-  padding-top: 1.25rem;
-  padding-bottom: 0.5rem;
+/* The phone column. Bottom padding leaves room for the "I got paid" bar. */
+.app {
+  max-width: 430px;
+  margin: 0 auto;
+  padding:
+    calc(env(safe-area-inset-top) + 6px)
+    calc(env(safe-area-inset-right) + 16px)
+    calc(env(safe-area-inset-bottom) + 120px)
+    calc(env(safe-area-inset-left) + 16px);
+}
+
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
 }
 
 h1 {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.2rem;
   letter-spacing: -0.01em;
 }
 
 h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.2rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  line-height: 1.25;
 }
 
 h3 {
@@ -107,75 +125,468 @@ p {
   margin: 0 0 0.75rem;
 }
 
-.tagline {
-  margin: 0;
+.muted {
   color: var(--muted);
-}
-
-main {
-  padding-bottom: 3rem;
-}
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin-top: 1rem;
-}
-
-/* Forms */
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.9rem;
-  min-width: 0;
-}
-
-label {
-  font-weight: 600;
 }
 
 small {
-  color: var(--muted);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
 }
 
-input,
+/* Buttons and inputs */
+
 button,
-select {
+input {
   font: inherit;
   color: inherit;
 }
 
-input[type="text"],
-input[type="number"],
-input[type="date"] {
+button {
+  min-height: 44px;
+  min-width: 44px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.primary {
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+  padding: 0 1.25rem;
+}
+
+.secondary {
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  background: var(--card);
+  font-weight: 600;
+  padding: 0 1rem;
+}
+
+.big {
+  width: 100%;
+  min-height: 60px;
+  font-size: 1.2rem;
+}
+
+.link {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0 0.75rem;
+}
+
+.icon-button {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.row-center {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  font-weight: 700;
+}
+
+input[type="text"] {
   width: 100%;
   min-width: 0;
-  min-height: 2.75rem;
-  padding: 0.5rem 0.65rem;
+  min-height: 52px;
+  padding: 0 0.85rem;
   border: 1px solid var(--input-border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--input-bg);
+  font-size: 1.125rem; /* 16px or more, so iPhone doesn't zoom in */
 }
 
 input[aria-invalid="true"] {
-  border-color: var(--error);
-  border-width: 2px;
+  border: 2px solid var(--error);
 }
 
 .money-input {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .money-input > span {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
+  font-size: 1.25rem;
+}
+
+.big-amount > span {
+  font-size: 2rem;
+}
+
+.big-amount input[type="text"] {
+  min-height: 64px;
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: -0.25rem 0 1rem;
+}
+
+.chips:not(:has(:not([hidden]))) {
+  display: none;
+}
+
+.chip {
+  border: 1px solid var(--input-border);
+  border-radius: 999px;
+  background: var(--input-bg);
+  font-weight: 600;
+  padding: 0 1rem;
+}
+
+/* Messages */
+
+.error:empty,
+.result:empty {
+  display: none;
+}
+
+.error {
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: var(--error-bg);
+  color: var(--error);
+  font-weight: 600;
+}
+
+.result {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: var(--ok-bg);
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.notice {
+  margin: 0.5rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--notice-bg);
+  color: var(--notice-text);
+  font-weight: 600;
+}
+
+.nudge {
+  width: 100%;
+  min-height: 48px;
+  margin: 0.5rem 0 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--notice-bg);
+  color: var(--notice-text);
+  font-weight: 700;
+}
+
+/* First run */
+
+.welcome {
+  padding-top: 1.5rem;
+}
+
+.welcome h2 {
+  font-size: 1.75rem;
+}
+
+/* Home */
+
+.headline-card {
+  padding: 1.25rem 0.25rem 0.5rem;
+}
+
+.headline {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.basis {
+  margin: 0.4rem 0 0;
+}
+
+.goal-cards {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.goal-card {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.goal-card.top {
+  padding: 1.25rem;
+}
+
+.goal-card.top .goal-name {
+  font-size: 1.5rem;
+}
+
+.goal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.goal-amounts {
+  margin: 0.15rem 0 0.6rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-card.top .goal-amounts {
+  font-size: 1.15rem;
+}
+
+progress {
+  display: block;
+  width: 100%;
+  height: 0.6rem;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: var(--track);
+  color: var(--goals);
+  overflow: hidden;
+}
+
+.goal-card.top progress {
+  height: 0.9rem;
+}
+
+progress::-webkit-progress-bar {
+  background: var(--track);
+  border-radius: 999px;
+}
+
+progress::-webkit-progress-value {
+  background: var(--goals);
+  border-radius: 999px;
+}
+
+progress::-moz-progress-bar {
+  background: var(--goals);
+  border-radius: 999px;
+}
+
+.goal-card.funded progress::-webkit-progress-value {
+  background: var(--ok);
+}
+
+.goal-card.funded progress::-moz-progress-bar {
+  background: var(--ok);
+}
+
+.goal-ready {
+  margin: 0.6rem 0 0;
+  font-weight: 700;
+}
+
+.goal-card.funded .goal-ready {
+  color: var(--ok);
+}
+
+/* "I got paid": fixed at the bottom, in the thumb zone. */
+.paybar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding:
+    1.25rem
+    calc(env(safe-area-inset-right) + 16px)
+    calc(env(safe-area-inset-bottom) + 12px)
+    calc(env(safe-area-inset-left) + 16px);
+  background: linear-gradient(to top, var(--bg) 65%, transparent);
+}
+
+.paybar .big {
+  max-width: 398px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+}
+
+/* Bottom sheets */
+
+dialog.sheet {
+  width: 100%;
+  max-width: min(430px, 100%);
+  max-height: calc(100dvh - 24px);
+  margin: auto auto 0;
+  padding: 0.5rem calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 16px);
+  border: 0;
+  border-radius: 22px 22px 0 0;
+  background: var(--card);
+  color: var(--text);
+  overflow-y: auto;
+}
+
+dialog.sheet::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.grip {
+  width: 40px;
+  height: 5px;
+  margin: 0.25rem auto 1rem;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.pay-sentence {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.timeline {
+  margin: 0 0 1.25rem;
+  padding-left: 1.2rem;
+}
+
+.timeline li {
+  margin: 0.3rem 0;
+}
+
+/* Goals on Home */
+
+.empty-goals {
+  margin: 1rem 0.25rem 0.75rem;
+}
+
+.wide {
+  width: 100%;
+  min-height: 52px;
+}
+
+#add-goal {
+  margin-top: 0.75rem;
+}
+
+.goal-head .icon-button {
+  margin: -0.5rem -0.5rem -0.5rem 0;
+  color: var(--muted);
+  flex: none;
+}
+
+.buy {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 0.85rem;
+  font-size: 1.1rem;
+}
+
+.goal-more {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.danger {
+  border: 1px solid var(--error);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* Settings */
+
+.app-bar .icon-button {
+  margin-right: -0.5rem;
+  color: var(--muted);
+}
+
+.notice > p {
+  margin: 0;
+}
+
+.notice > button {
+  margin-top: 0.75rem;
+}
+
+dialog.sheet.full {
+  height: calc(100dvh - 24px);
+}
+
+.sheet-head {
+  position: sticky;
+  top: -0.5rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -0.5rem -1rem 0;
+  padding: 0.75rem 1rem 0.5rem;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.sheet-head h2 {
+  margin: 0;
+}
+
+.settings-section {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-section:last-child {
+  border-bottom: 0;
+}
+
+.settings-section h3 {
+  font-size: 1.15rem;
+  margin-bottom: 0.4rem;
 }
 
 .split-inputs {
@@ -188,149 +599,43 @@ input[aria-invalid="true"] {
   margin-bottom: 0.25rem;
 }
 
-.unit {
-  font-weight: 400;
-  color: var(--muted);
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-button {
-  min-height: 2.75rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--card);
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: var(--accent);
-}
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
-  font-weight: 600;
-}
-
-button.small {
-  min-height: 2.25rem;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.9rem;
-}
-
-button.danger {
-  color: var(--error);
-}
-
-/* Clear keyboard focus everywhere. */
-:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
-
-.hint {
-  color: var(--muted);
-  margin: 0.5rem 0;
-}
-
-.error:empty,
-.result:empty {
-  display: none;
-}
-
-.error {
-  color: var(--error);
-  background: var(--error-bg);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  font-weight: 600;
-}
-
-.result {
-  color: var(--ok);
-  background: var(--ok-bg);
-  border-radius: 8px;
-  padding: 0.6rem 0.75rem;
-  margin: 0.75rem 0 0;
-  font-weight: 600;
-}
-
-.notice {
-  background: var(--notice-bg);
-  color: var(--notice-text);
-  border-radius: var(--radius);
+.preview {
+  margin: 0.5rem 0 1rem;
   padding: 0.75rem 1rem;
-  margin: 1rem 0 0;
-  font-weight: 600;
+  border-radius: 12px;
+  background: var(--bg);
 }
 
-/* Buckets */
+.preview p {
+  margin: 0 0 0.25rem;
+}
 
-/* One row per bucket: name on the left, amount on the right, so any amount fits on a phone. */
-.buckets {
-  list-style: none;
+.preview ul {
   margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
+  padding-left: 1.2rem;
 }
 
-.bucket {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "name amount"
-    "pct amount";
-  align-items: center;
-  column-gap: 0.75rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  border-left: 6px solid var(--bucket-color);
-}
-
-.bucket-spend { --bucket-color: var(--spend); }
-.bucket-save { --bucket-color: var(--save); }
-.bucket-goals { --bucket-color: var(--goals); }
-
-.bucket-name {
-  grid-area: name;
-  font-weight: 700;
-}
-
-.bucket-amount {
-  grid-area: amount;
-  font-size: 1.35rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.bucket-pct {
-  grid-area: pct;
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-/* Money never breaks across lines. */
-.bucket-amount,
-.history-amount {
-  white-space: nowrap;
-  overflow-wrap: normal;
-}
-
-/* Recent activity */
-
+.money-list,
 .history {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.money-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.money-list li:first-child {
+  border-top: 0;
+}
+
+.money-list li span:last-child {
+  font-weight: 700;
 }
 
 .history li {
@@ -359,7 +664,7 @@ button.danger {
 
 .history-when {
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
 }
 
 .history-amount {
@@ -372,136 +677,88 @@ button.danger {
   color: var(--ok);
 }
 
-/* Goals */
+.history .secondary {
+  min-height: 44px;
+}
 
-.goal-list {
-  list-style: none;
+.stack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+#history-toggle {
+  margin-top: 0.5rem;
+}
+
+/* Track my spending */
+
+.card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.spending h2 {
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+
+.left {
   margin: 0 0 0.75rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.recent {
+  margin-top: 0.5rem;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.switch-row p {
+  margin: 0;
+}
+
+.switch {
+  flex: none;
+  position: relative;
+  width: 64px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--input-border);
   padding: 0;
 }
 
-.goal {
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--border);
+.switch .knob {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--card);
+  transition: transform 0.15s ease;
 }
 
-.goal:first-child {
-  border-top: 0;
-  padding-top: 0.25rem;
+.switch[aria-checked="true"] {
+  background: var(--accent);
 }
 
-.goal-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.25rem 0.75rem;
-  margin-bottom: 0.4rem;
+.switch[aria-checked="true"] .knob {
+  transform: translateX(20px);
 }
 
-.goal-progress-text {
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-variant-numeric: tabular-nums;
-}
-
-progress {
-  display: block;
-  width: 100%;
-  height: 0.8rem;
-  -webkit-appearance: none;
-  appearance: none;
-  border: 0;
-  border-radius: 999px;
-  background: var(--track);
-  color: var(--goals);
-  overflow: hidden;
-}
-
-progress::-webkit-progress-bar {
-  background: var(--track);
-  border-radius: 999px;
-}
-
-progress::-webkit-progress-value {
-  background: var(--goals);
-  border-radius: 999px;
-}
-
-progress::-moz-progress-bar {
-  background: var(--goals);
-  border-radius: 999px;
-}
-
-.goal.done progress::-webkit-progress-value {
-  background: var(--ok);
-}
-
-.goal.done progress::-moz-progress-bar {
-  background: var(--ok);
-}
-
-.goal-status {
-  margin: 0.4rem 0 0.5rem;
-  font-weight: 600;
-}
-
-.goal.done .goal-status {
-  color: var(--ok);
-}
-
-.goal-actions {
-  gap: 0.4rem;
-}
-
-.subform {
-  border-top: 1px solid var(--border);
-  padding-top: 0.9rem;
-}
-
-.subform h3 {
-  margin-bottom: 0.6rem;
-}
-
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-button:disabled:hover {
-  border-color: var(--border);
-}
-
-/* What if? */
-
-input[type="range"] {
-  width: 100%;
-  min-height: 2.75rem;
-  margin: 0;
-  accent-color: var(--goals);
-  cursor: pointer;
-}
-
-.slider-ends {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.whatif-split {
-  display: block;
-  font-weight: 700;
-  font-size: 1.05rem;
-  margin-bottom: 0.25rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.whatif-goals {
-  margin: 0 0 0.9rem;
-  padding-left: 1.2rem;
-}
-
-.whatif-goals li {
-  margin: 0.2rem 0;
+@media (prefers-reduced-motion: reduce) {
+  .switch .knob {
+    transition: none;
+  }
 }

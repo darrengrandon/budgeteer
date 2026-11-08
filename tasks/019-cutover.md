@@ -2,7 +2,7 @@
 id: 019
 title: Switch to the phone UI and retire the old one
 depends_on: [018]
-status: todo
+status: done
 ---
 
 ## Goal

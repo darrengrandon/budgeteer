@@ -29,12 +29,10 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    // The old page, until ticket 019 retires it.
-    { name: 'legacy', testIgnore: 'phone/**', use: { viewport: { width: 400, height: 860 } } },
-    // The phone app at an iPhone size and a Pixel size. Only Chromium can run here, so the
-    // iPhone project is Chromium with an iPhone screen, touch and user agent, not Safari.
-    { name: 'iphone', testDir: './e2e/phone', use: { ...devices['iPhone 15'], browserName: 'chromium' } },
-    { name: 'pixel', testDir: './e2e/phone', use: { ...devices['Pixel 9'], browserName: 'chromium' } },
+    // An iPhone size and a Pixel size. Only Chromium can run here, so the iPhone project is
+    // Chromium with an iPhone screen, touch and user agent, not Safari (see SPEC.md).
+    { name: 'iphone', use: { ...devices['iPhone 15'], browserName: 'chromium' } },
+    { name: 'pixel', use: { ...devices['Pixel 9'], browserName: 'chromium' } },
   ],
   webServer: {
     // Serves the files only. Bound to this computer so the folder is not shared on the network.

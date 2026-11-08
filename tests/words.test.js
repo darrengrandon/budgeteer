@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine, whatIfWeekly, spendAvailable,
+  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, spendAvailable,
   spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence, payBasis, leftToSpend,
 } from '../src/words.js';
 
@@ -55,87 +55,6 @@ test('shortDate shows a date like "Nov 7, 2026" without time-zone surprises', ()
 });
 
 // Goals (ticket 005)
-
-test('goalStatus says how many weeks are left in plain words', () => {
-  const base = { savedCents: 2500, targetCents: 10000, averageWeeklyCents: 5000, goalsPercent: 20 };
-  assert.equal(goalStatus({ ...base, weeks: 5 }), 'About 5 weeks to go.');
-  assert.equal(goalStatus({ ...base, weeks: 1 }), 'About 1 week to go.');
-});
-
-test('goalStatus with no recent pay asks for a paycheck instead of showing Infinity', () => {
-  const status = goalStatus({ savedCents: 0, targetCents: 10000, weeks: Infinity, averageWeeklyCents: 0, goalsPercent: 20 });
-  assert.equal(status, 'Log a paycheck to see a date.');
-});
-
-test('goalStatus when the split sends nothing to Goals', () => {
-  const status = goalStatus({ savedCents: 0, targetCents: 10000, weeks: Infinity, averageWeeklyCents: 5000, goalsPercent: 0 });
-  assert.equal(status, "Your split puts 0% into Goals, so this won't fill up. Change your split to get here.");
-});
-
-test('goalStatus when recent pay is too small to give a date', () => {
-  const status = goalStatus({ savedCents: 0, targetCents: 10000, weeks: Infinity, averageWeeklyCents: 1, goalsPercent: 20 });
-  assert.equal(status, 'Your recent pay is too small to give a date yet.');
-});
-
-test('goalStatus says when a goal is finished', () => {
-  const status = goalStatus({ savedCents: 10000, targetCents: 10000, weeks: 0, averageWeeklyCents: 0, goalsPercent: 20 });
-  assert.equal(status, 'Done! You saved enough for this.');
-});
-
-test('goalProgress shows saved out of target', () => {
-  assert.equal(goalProgress(2500, 10000), '$25.00 of $100.00 saved');
-});
-
-test('unassignedNote points out Goals money that no goal is using', () => {
-  assert.equal(unassignedNote(0, true), '');
-  assert.equal(unassignedNote(1500, true), 'You have $15.00 in Goals that no goal needs right now. Add a goal to put it to work.');
-  assert.equal(unassignedNote(1500, false), 'You have $15.00 in Goals. Add a goal to start filling it.');
-});
-
-test('goalStatus adds years when the wait is long, so big numbers make sense', () => {
-  const base = { savedCents: 0, targetCents: 10000, averageWeeklyCents: 5000, goalsPercent: 20 };
-  assert.equal(goalStatus({ ...base, weeks: 51 }), 'About 51 weeks to go.');
-  assert.equal(goalStatus({ ...base, weeks: 52 }), "About 52 weeks to go. That's about a year.");
-  assert.equal(goalStatus({ ...base, weeks: 80 }), "About 80 weeks to go. That's over a year.");
-  assert.equal(goalStatus({ ...base, weeks: 223 }), "About 223 weeks to go. That's about 4 years.");
-});
-
-// What-if (ticket 006)
-
-test('whatIfLine compares the trial weeks with now', () => {
-  const base = { name: 'Phone', done: false, averageWeeklyCents: 10000, trialGoalsPercent: 30 };
-  assert.equal(whatIfLine({ ...base, trialWeeks: 9, currentWeeks: 11 }), 'Phone: about 9 weeks (2 weeks sooner)');
-  assert.equal(whatIfLine({ ...base, trialWeeks: 12, currentWeeks: 11 }), 'Phone: about 12 weeks (1 week later)');
-  assert.equal(whatIfLine({ ...base, trialWeeks: 11, currentWeeks: 11 }), 'Phone: about 11 weeks (same as now)');
-  assert.equal(whatIfLine({ ...base, trialWeeks: 1, currentWeeks: Infinity }), 'Phone: about 1 week');
-});
-
-test('whatIfLine for finished goals, no pay, and 0% to Goals', () => {
-  const base = { name: 'Phone', trialWeeks: Infinity, currentWeeks: Infinity };
-  assert.equal(whatIfLine({ ...base, done: true, averageWeeklyCents: 0, trialGoalsPercent: 20 }), 'Phone: done already');
-  assert.equal(whatIfLine({ ...base, done: false, averageWeeklyCents: 0, trialGoalsPercent: 20 }), 'Phone: log a paycheck to see a date');
-  assert.equal(whatIfLine({ ...base, done: false, averageWeeklyCents: 5000, trialGoalsPercent: 0 }), "Phone: never, with 0% to Goals");
-});
-
-// Fresh-eyes review C8 / U5: paychecks exist, but none in the last 4 weeks.
-
-test('goalStatus when the only paychecks are older than 4 weeks', () => {
-  const status = goalStatus({ savedCents: 10000, targetCents: 30000, weeks: Infinity, averageWeeklyCents: 0, goalsPercent: 20, hasPaychecks: true });
-  assert.equal(status, "No paychecks in the last 4 weeks, so there's no estimate yet. Log your next one to see the weeks to go.");
-});
-
-test('whatIfLine when the only paychecks are older than 4 weeks', () => {
-  const line = whatIfLine({ name: 'Phone', done: false, trialWeeks: Infinity, currentWeeks: Infinity, averageWeeklyCents: 0, trialGoalsPercent: 20, hasPaychecks: true });
-  assert.equal(line, 'Phone: no paychecks in the last 4 weeks');
-});
-
-test('whatIfWeekly says what goes into Goals each week, or why it cannot', () => {
-  assert.equal(whatIfWeekly({ averageWeeklyCents: 5000, weeklyCents: 1000, hasPaychecks: true }), "That's about $10.00 a week into Goals.");
-  assert.equal(whatIfWeekly({ averageWeeklyCents: 0, weeklyCents: 0, hasPaychecks: false }), 'Log a paycheck to see dates.');
-  assert.equal(whatIfWeekly({ averageWeeklyCents: 0, weeklyCents: 0, hasPaychecks: true }), 'No paychecks in the last 4 weeks, so there are no estimates yet.');
-});
-
-// Review U12: the line above the purchase form.
 
 test('spendAvailable says what is left, and does not say "first" once paychecks exist', () => {
   assert.equal(spendAvailable(1250, true), 'You have $12.50 to spend.');
