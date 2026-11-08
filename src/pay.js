@@ -1,5 +1,7 @@
-// Weekly pay, learned from the gaps between paydays (SPEC.md "The numbers", docs/adr/0004).
-// Pure functions. All money is integer cents; weekly pay is kept as an exact fraction.
+// Weekly pay from the usual gap between paydays (SPEC.md "The numbers", docs/adr/0004 and 0007).
+// The teen's answer to "How often do you get paid?" sets the gap; only "It's different every
+// time" learns it from logged paydays. Pure functions. All money is integer cents; weekly pay
+// and the gap are kept as exact fractions.
 
 import { dayNumber, addDays } from './budget.js';
 
@@ -17,7 +19,40 @@ const GRACE_DAYS = 2;
 /**
  * @typedef {{ date: string, cents: number }} PaycheckLike
  * @typedef {{ cents: number, days: number }} WeeklyPay cents earned per this many days
+ * @typedef {{ num: number, den: number }} Gap the usual gap is num ÷ den days
+ * @typedef {import('./storage.js').PayFrequency} PayFrequency
  */
+
+/** The gap each stated answer means. Twice a month is 24 paydays a year; once a month, 12. */
+const STATED_GAPS = Object.freeze({
+  weekly: { num: 7, den: 1 },
+  biweekly: { num: 14, den: 1 },
+  'twice-monthly': { num: 365, den: 24 },
+  monthly: { num: 365, den: 12 },
+});
+
+/**
+ * The usual gap between paydays as an exact fraction of days: the stated answer, or for
+ * "It's different every time" the gap learned from logged paydays (usualGapDays).
+ * @param {PaycheckLike[]} paychecks
+ * @param {string} todayISO
+ * @param {PayFrequency} [frequency]
+ * @returns {Gap}
+ */
+export function payGap(paychecks, todayISO, frequency = 'varies') {
+  if (frequency !== 'varies' && Object.hasOwn(STATED_GAPS, frequency)) return STATED_GAPS[frequency];
+  return { num: usualGapDays(paychecks, todayISO), den: 1 };
+}
+
+/**
+ * Days after the last payday until the k-th next one, rounded up so a date is never early.
+ * @param {Gap} gap
+ * @param {number} k
+ * @returns {number}
+ */
+export function gapDays(gap, k) {
+  return Math.ceil((k * gap.num) / gap.den);
+}
 
 /**
  * Paychecks grouped into paydays, oldest first. A paycheck less than 4 days after the
@@ -49,17 +84,18 @@ export function paydays(paychecks, todayISO) {
  * counted a single payday twice).
  * @param {PaycheckLike[]} paychecks
  * @param {string} todayISO
+ * @param {PayFrequency} [frequency]
  * @returns {string[]} 'YYYY-MM-DD' dates, oldest first
  */
-export function missedPaydays(paychecks, todayISO) {
+export function missedPaydays(paychecks, todayISO, frequency = 'varies') {
   const all = paydays(paychecks, todayISO);
   if (all.length === 0) return [];
-  const gap = usualGapDays(paychecks, todayISO);
+  const gap = payGap(paychecks, todayISO, frequency);
   const lastDate = all[all.length - 1].date;
-  const passed = Math.floor((dayNumber(todayISO) - dayNumber(lastDate)) / gap);
+  const passed = Math.floor(((dayNumber(todayISO) - dayNumber(lastDate)) * gap.den) / gap.num);
   /** @type {string[]} */
   const missed = [];
-  for (let i = 1; i < passed && missed.length < MAX_MISSED; i++) missed.push(addDays(lastDate, i * gap));
+  for (let i = 1; i < passed && missed.length < MAX_MISSED; i++) missed.push(addDays(lastDate, gapDays(gap, i)));
   return missed;
 }
 
@@ -90,16 +126,19 @@ export function usualGapDays(paychecks, todayISO) {
 /**
  * Weekly pay as an exact fraction: the recent paydays' total, earned over
  * (number of recent paydays x usual gap) days. Weekly cents = cents x 7 / days.
+ * A gap of num/den days is kept whole by multiplying both sides by den.
  * Null when there is no payday yet.
  * @param {PaycheckLike[]} paychecks
  * @param {string} todayISO
+ * @param {PayFrequency} [frequency]
  * @returns {WeeklyPay | null}
  */
-export function weeklyPay(paychecks, todayISO) {
+export function weeklyPay(paychecks, todayISO, frequency = 'varies') {
   const recent = recentPaydays(paychecks, todayISO);
   if (recent.length === 0) return null;
-  const cents = recent.reduce((sum, p) => sum + p.cents, 0);
-  return { cents, days: recent.length * usualGapDays(paychecks, todayISO) };
+  const total = recent.reduce((sum, p) => sum + p.cents, 0);
+  const gap = payGap(paychecks, todayISO, frequency);
+  return { cents: total * gap.den, days: recent.length * gap.num };
 }
 
 /**
@@ -117,11 +156,13 @@ export function weeklySpendCents(pay, spendPercent) {
  * True when the last payday is more than the usual gap plus 2 days ago.
  * @param {PaycheckLike[]} paychecks
  * @param {string} todayISO
+ * @param {PayFrequency} [frequency]
  * @returns {boolean}
  */
-export function gotPaidDue(paychecks, todayISO) {
+export function gotPaidDue(paychecks, todayISO, frequency = 'varies') {
   const all = paydays(paychecks, todayISO);
   if (all.length === 0) return false;
   const daysSince = dayNumber(todayISO) - dayNumber(all[all.length - 1].date);
-  return daysSince > usualGapDays(paychecks, todayISO) + GRACE_DAYS;
+  const gap = payGap(paychecks, todayISO, frequency);
+  return daysSince * gap.den > gap.num + GRACE_DAYS * gap.den;
 }

@@ -1,6 +1,6 @@
 // What Home shows, worked out from the records. Pure, so it is tested without a browser.
 
-import { weeklyPay, weeklySpendCents, gotPaidDue, paydays, usualGapDays } from './pay.js';
+import { weeklyPay, weeklySpendCents, gotPaidDue, paydays, payGap, gapDays } from './pay.js';
 import { projectGoals } from './goals.js';
 import { balances } from './storage.js';
 import { splitIncome, addDays } from './budget.js';
@@ -44,7 +44,8 @@ export function backupDue(paycheckCount, lastCount) {
  * @returns {{ headline: string, basis: string, nudge: boolean, goals: GoalCard[] }}
  */
 export function homePlan(state, todayISO, split = state.split) {
-  const pay = weeklyPay(state.paychecks, todayISO);
+  const frequency = state.settings?.payFrequency ?? 'varies';
+  const pay = weeklyPay(state.paychecks, todayISO, frequency);
   const projection = projectGoals(state, todayISO, split, pay);
   const days = paydays(state.paychecks, todayISO);
   const lastPayday = days.length > 0 ? days[days.length - 1].date : todayISO;
@@ -52,14 +53,14 @@ export function homePlan(state, todayISO, split = state.split) {
   // The goal date is the payday when the money will really be there, so it is never early:
   // a typical payday (the average, rounded down) split the way the app splits it, repeated
   // every usual gap after the last payday (SPEC.md "When can I buy it").
-  const gap = usualGapDays(state.paychecks, todayISO);
-  const typical = pay ? Math.floor((pay.cents * gap) / pay.days) : 0;
+  const gap = payGap(state.paychecks, todayISO, frequency);
+  const typical = pay ? Math.floor((pay.cents * gap.num) / (pay.days * gap.den)) : 0;
   const perPayday = typical > 0 ? splitIncome(typical, split).goals : 0;
   let targetSoFar = 0;
   return {
     headline: spendHeadline(weeklySpendCents(pay, split.spend)),
     basis: pay ? payBasis(Math.round((pay.cents * 7) / pay.days)) : '',
-    nudge: gotPaidDue(state.paychecks, todayISO),
+    nudge: gotPaidDue(state.paychecks, todayISO, frequency),
     goals: projection.goals.map(({ goal, savedCents, weeks }, index) => {
       const funded = savedCents >= goal.targetCents;
       const canMoveToBuy = index > 0 && !funded && goal.targetCents <= goalsBalance;
@@ -83,7 +84,7 @@ export function homePlan(state, todayISO, split = state.split) {
             hasPay: pay !== null,
             goalsPercent: split.goals,
             todayISO,
-            dateISO: Number.isFinite(paydaysNeeded) ? addDays(lastPayday, paydaysNeeded * gap) : undefined,
+            dateISO: Number.isFinite(paydaysNeeded) ? addDays(lastPayday, gapDays(gap, paydaysNeeded)) : undefined,
           }),
       };
     }),

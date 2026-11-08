@@ -411,7 +411,7 @@ function openPaySheet(firstTime = false) {
   el('pay-last').hidden = note === '';
 
   // Offer to add paydays that were clearly skipped (REVIEW.md L2).
-  missed = missedPaydays(state.paychecks, today);
+  missed = missedPaydays(state.paychecks, today, state.settings?.payFrequency);
   payMissed.hidden = missed.length === 0;
   payMissed.textContent = missed.length > 0 ? missedChip(missed, today) : '';
   payMissed.setAttribute('aria-pressed', 'false');
