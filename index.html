@@ -142,6 +142,18 @@
     <div id="pay-done" hidden>
       <p id="pay-sentence" class="pay-sentence"></p>
       <p id="pay-extra" class="muted" hidden></p>
+      <!-- Only after the first paycheck (docs/adr/0007). A tap saves at once. -->
+      <div id="pay-often" class="often" role="group" aria-labelledby="pay-often-title" hidden>
+        <p id="pay-often-title" class="often-title">How often do you get paid?</p>
+        <div class="chips">
+          <button type="button" class="chip" data-often="weekly" aria-pressed="false">Every week</button>
+          <button type="button" class="chip" data-often="biweekly" aria-pressed="false">Every 2 weeks</button>
+          <button type="button" class="chip" data-often="twice-monthly" aria-pressed="false">Twice a month</button>
+          <button type="button" class="chip" data-often="monthly" aria-pressed="false">Once a month</button>
+          <button type="button" class="chip" data-often="varies" aria-pressed="false">It's different every time</button>
+        </div>
+        <p id="pay-often-saved" class="often-saved muted" role="status"></p>
+      </div>
       <ul id="pay-timeline" class="timeline"></ul>
       <p id="pay-undo-error" class="error" role="alert"></p>
       <button type="button" id="pay-close" class="primary big">Done</button>

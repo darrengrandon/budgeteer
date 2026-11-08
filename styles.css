@@ -819,6 +819,24 @@ dialog.sheet.full {
   font-size: 0.95rem;
 }
 
+/* "How often do you get paid?" after the first paycheck */
+.often-title {
+  margin: 1rem 0 0.5rem;
+  font-weight: 700;
+}
+
+.often .chips {
+  margin: 0 0 0.5rem;
+}
+
+.often-saved {
+  margin: 0 0 0.75rem;
+}
+
+.often-saved:empty {
+  display: none;
+}
+
 .chip[aria-pressed="true"] {
   background: var(--accent);
   border-color: var(--accent);

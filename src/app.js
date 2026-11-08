@@ -18,6 +18,7 @@ import {
   moveGoalToTop,
   addPurchase,
   setTrackSpending,
+  setPayFrequency,
   removePaycheck,
   removePurchase,
   removeGoalPurchase,
@@ -467,6 +468,7 @@ el('pay-form').addEventListener('submit', (event) => {
   }
 
   const backfill = payMissed.getAttribute('aria-pressed') === 'true' ? missed : [];
+  const isFirst = state.paychecks.length === 0;
   let next = state;
   /** @type {string[]} */
   const ids = [];
@@ -486,15 +488,17 @@ el('pay-form').addEventListener('submit', (event) => {
     return;
   }
   justAddedIds = ids;
-  showPayResult(added, backfill);
+  showPayResult(added, backfill, isFirst);
 });
 
 /**
- * Where the money went, and each goal's new timeline.
+ * Where the money went, and each goal's new timeline. After the first paycheck it also asks
+ * "How often do you get paid?" (docs/adr/0007).
  * @param {import('./storage.js').Paycheck} added today's paycheck
  * @param {string[]} backfill missed paydays added too
+ * @param {boolean} isFirst this was the first paycheck ever
  */
-function showPayResult(added, backfill) {
+function showPayResult(added, backfill, isFirst) {
   if (!state) return;
   const today = localISODate();
   el('pay-sentence').textContent = `Nice. ${paycheckSentence(added.cents, paycheckParts(added))}`;
@@ -502,15 +506,36 @@ function showPayResult(added, backfill) {
   el('pay-extra').textContent = backfill.length === 1 ? `Also added the paycheck from ${when}.`
     : backfill.length > 1 ? `Also added the ${backfill.length} paychecks from ${when}.` : '';
   el('pay-extra').hidden = backfill.length === 0;
-  el('pay-timeline').replaceChildren(...homePlan(state, today).goals.map((g) => {
-    const li = document.createElement('li');
-    li.textContent = `${g.name}: ${g.line.charAt(0).toLowerCase()}${g.line.slice(1)}`;
-    return li;
-  }));
+  el('pay-often').hidden = !isFirst;
+  for (const chip of oftenChips) chip.setAttribute('aria-pressed', 'false');
+  el('pay-often-saved').textContent = '';
+  drawPayTimeline();
   el('pay-entry').hidden = true;
   el('pay-done').hidden = false;
   el('pay-title').classList.add('visually-hidden'); // the question is answered; it still names the sheet
   el('pay-close').focus();
+}
+
+/** Each goal's timeline on the paycheck result, as it is now. */
+function drawPayTimeline() {
+  if (!state) return;
+  el('pay-timeline').replaceChildren(...homePlan(state, localISODate()).goals.map((g) => {
+    const li = document.createElement('li');
+    li.textContent = `${g.name}: ${g.line.charAt(0).toLowerCase()}${g.line.slice(1)}`;
+    return li;
+  }));
+}
+
+const oftenChips = /** @type {HTMLButtonElement[]} */ ([...el('pay-often').querySelectorAll('button[data-often]')]);
+for (const chip of oftenChips) {
+  chip.addEventListener('click', () => {
+    if (!state) return;
+    const frequency = /** @type {import('./storage.js').PayFrequency} */ (chip.dataset.often);
+    if (!commit(setPayFrequency(state, frequency))) return;
+    for (const other of oftenChips) other.setAttribute('aria-pressed', String(other === chip));
+    el('pay-often-saved').textContent = 'Saved. You can change it in Settings.';
+    drawPayTimeline();
+  });
 }
 
 /** Take back the paychecks just added. Returns false if their money was already used. */
