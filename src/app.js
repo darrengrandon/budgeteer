@@ -995,12 +995,27 @@ function offerAddBack(record) {
 
 function renderSettings() {
   if (!state) return;
+  const frequency = state.settings?.payFrequency ?? 'varies';
+  for (const radio of oftenRadios) radio.checked = radio.value === frequency;
   const tracking = state.settings?.trackSpending === true;
   el('track-switch').setAttribute('aria-checked', String(tracking));
   el('money-note').hidden = tracking;
   renderSplitPreview();
   renderMoney();
   renderHistory();
+}
+
+// How often do you get paid? (docs/adr/0007): a change saves at once and shows the new number.
+
+const oftenRadios = /** @type {HTMLInputElement[]} */ ([...settingsSheet.querySelectorAll('input[name="often"]')]);
+for (const radio of oftenRadios) {
+  radio.addEventListener('change', () => {
+    if (!state || !radio.checked) return;
+    clearSettingsMessages();
+    if (!commit(setPayFrequency(state, /** @type {import('./storage.js').PayFrequency} */ (radio.value)))) return;
+    const { headline } = homePlan(state, localISODate());
+    el('often-result').textContent = headline.startsWith('Spend') ? `Saved. ${headline}.` : 'Saved.';
+  });
 }
 
 // Track my spending (docs/adr/0005): off hides purchases; it never deletes them.

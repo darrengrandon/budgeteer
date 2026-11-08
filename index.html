@@ -204,6 +204,19 @@
       </form>
     </section>
 
+    <section class="settings-section" aria-labelledby="often-title">
+      <h3 id="often-title">How often do you get paid?</h3>
+      <p id="often-help" class="muted">This sets your weekly numbers and goal dates. If it's different every time, Budgeteer goes by the dates you log.</p>
+      <div class="radio-list" role="radiogroup" aria-labelledby="often-title" aria-describedby="often-help">
+        <label class="radio-row"><input type="radio" name="often" value="weekly"> Every week</label>
+        <label class="radio-row"><input type="radio" name="often" value="biweekly"> Every 2 weeks</label>
+        <label class="radio-row"><input type="radio" name="often" value="twice-monthly"> Twice a month</label>
+        <label class="radio-row"><input type="radio" name="often" value="monthly"> Once a month</label>
+        <label class="radio-row"><input type="radio" name="often" value="varies"> It's different every time</label>
+      </div>
+      <p id="often-result" class="result" role="status"></p>
+    </section>
+
     <section class="settings-section" aria-labelledby="money-title">
       <h3 id="money-title">Your money</h3>
       <ul id="money" class="money-list"></ul>
