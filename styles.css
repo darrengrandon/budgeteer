@@ -891,6 +891,17 @@ dialog.sheet.full {
   text-underline-offset: 6px;
 }
 
+/* One-tap "Same as last time" on Home (lazy-v2 step 3b) */
+.same-again {
+  margin-top: 0.75rem;
+}
+
+/* Behind an open sheet Home can't be used, and the paycheck sheet has its own
+   "Same as last time" chip: keep its place, but don't show two. */
+body:has(dialog[open]) .same-again {
+  visibility: hidden;
+}
+
 /* Tap-to-explain (lazy-v2 step 3a): a number with a dotted line under it shows one sentence. */
 [data-explain] {
   cursor: pointer;

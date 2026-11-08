@@ -130,3 +130,19 @@ export function spendingExplain(state) {
   const spentCents = state.purchases.reduce((sum, b) => sum + b.cents, 0);
   return explainLeftToSpend(inCents, spentCents);
 }
+
+/**
+ * The amount for the one-tap "Same as last time" on Home (step 3b): the last paycheck added.
+ * Null before any paycheck, and when that amount was already logged today or yesterday,
+ * because logging it again is probably a repeat (SPEC.md decision 13).
+ * @param {State} state
+ * @param {string} todayISO
+ * @returns {number | null}
+ */
+export function sameAgainCents(state, todayISO) {
+  const last = state.paychecks[state.paychecks.length - 1];
+  if (!last) return null;
+  const yesterday = addDays(todayISO, -1);
+  const repeat = state.paychecks.some((p) => p.cents === last.cents && (p.date === todayISO || p.date === yesterday));
+  return repeat ? null : last.cents;
+}

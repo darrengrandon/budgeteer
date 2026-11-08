@@ -69,6 +69,11 @@ paycheck goes to Spend, so about $50 a week is yours to spend."). That covers th
 the pay line, each goal's "$40 of $300" and "Ready in about..." line, and with tracking on,
 "left to spend" and each latest amount. One is open at a time; a second tap closes it.
 
+Under the pay line, "Same as last time: add $150.00" logs the last paycheck's amount again,
+dated today, in one tap: no sheet. "Added $150.00." shows with "Undo" for 5 seconds. It isn't
+shown before the first paycheck, or when that amount was already logged today or yesterday
+(that would be a repeat, decision 13), so a double tap can't log it twice.
+
 ### Paycheck sheet
 A bottom sheet with the amount only (date is today) on the numeric keypad, and a
 "Same as last time" chip when there is an earlier paycheck.

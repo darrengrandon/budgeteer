@@ -36,7 +36,7 @@ import {
 import { buyGoal } from './goals.js';
 import { centsToInput, formatCents } from './money.js';
 import { localISODate, addDays } from './budget.js';
-import { homePlan, backupDue, spendingExplain } from './plan.js';
+import { homePlan, backupDue, spendingExplain, sameAgainCents } from './plan.js';
 import { missedPaydays } from './pay.js';
 import {
   paycheckSentence,
@@ -108,6 +108,8 @@ function showNotice(text, offerDownload = false) {
 
 /** Home messages fade after this long (REVIEW.md L13). */
 const STATUS_MS = 10_000;
+/** The Undo after a one-tap "Same as last time" lasts this long (step 3b). */
+const SAME_AGAIN_UNDO_MS = 5_000;
 let statusTimer = 0;
 /** @type {(() => void) | null} */
 let statusRun = null;
@@ -118,8 +120,9 @@ let statusRun = null;
  * @param {string} text
  * @param {{ label: string, name?: string, run: () => void } | null} [action]
  *   name: a fuller accessible name when the visible label is short ("Undo" / "Undo paycheck")
+ * @param {number} [ms] how long it stays
  */
-function setStatus(text, action = null) {
+function setStatus(text, action = null, ms = STATUS_MS) {
   el('home-status').textContent = text;
   const button = el('home-status-action');
   button.hidden = !action;
@@ -128,10 +131,12 @@ function setStatus(text, action = null) {
   else button.removeAttribute('aria-label');
   statusRun = action ? action.run : null;
   clearTimeout(statusTimer);
-  if (text) statusTimer = window.setTimeout(() => setStatus(''), STATUS_MS);
+  if (text) statusTimer = window.setTimeout(() => setStatus(''), ms);
 }
 
-el('home-status-action').addEventListener('click', () => {
+el('home-status-action').addEventListener('click', (event) => {
+  // The second tap of a double tap on "Same as last time" lands here: never let it undo.
+  if (isSecondTap(event)) return;
   const run = statusRun;
   setStatus('');
   run?.();
@@ -1107,6 +1112,38 @@ function renderSpending() {
   }));
 }
 
+// One tap on "Same as last time" (step 3b): saves the last amount today at once, with a
+// 5-second Undo. It is hidden once that amount is logged today, so it can't log twice.
+el('same-again').addEventListener('click', (event) => {
+  if (!state || isSecondTap(event)) return;
+  const cents = sameAgainCents(state, localISODate());
+  if (cents === null) return;
+  let next;
+  try {
+    next = addPaycheck(state, { date: localISODate(), cents });
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    setStatus(error.message);
+    return;
+  }
+  const id = next.paychecks[next.paychecks.length - 1].id;
+  if (!commit(next)) return;
+  setStatus(`Added ${formatCents(cents)}.`, {
+    label: 'Undo',
+    name: 'Undo paycheck',
+    run: () => {
+      if (!state) return;
+      try {
+        if (commit(removePaycheck(state, id))) setStatus('Paycheck removed.');
+      } catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        setStatus("That paycheck can't be taken back now, because its money was already used.");
+      }
+    },
+  }, SAME_AGAIN_UNDO_MS);
+  el('headline').focus();
+});
+
 // ---------------------------------------------------------------------------
 // Tap-to-explain (lazy-v2 step 3a): every number on Home shows one plain sentence below it
 // when tapped. One is open at a time; a second tap closes it.
@@ -1311,6 +1348,9 @@ function render() {
   el('headline').textContent = plan.headline;
   el('basis').textContent = plan.basis;
   el('basis').hidden = plan.basis === '';
+  const again = sameAgainCents(state, localISODate());
+  el('same-again').hidden = again === null;
+  el('same-again').textContent = again === null ? '' : `Same as last time: add ${formatCents(again)}`;
   el('goal-cards').replaceChildren(...plan.goals.map((goal, i) => goalCard(goal, i === 0)));
   el('goals-empty').hidden = plan.goals.length > 0;
   renderSpending();
