@@ -17,6 +17,11 @@ import {
   removePurchase,
   OverspendError,
   recentActivity,
+  addGoal,
+  updateGoal,
+  removeGoal,
+  moveGoal,
+  LIMITS,
 } from '../src/storage.js';
 
 /** A fake localStorage that keeps items in a Map. */
@@ -388,4 +393,59 @@ test('recentActivity orders ids by number, so p10 comes after p9', () => {
   let state = emptyState();
   for (let i = 0; i < 10; i++) state = addPaycheck(state, { date: '2026-11-07', cents: 100 + i });
   assert.deepEqual(recentActivity(state, 2).items.map((i) => i.cents), [109, 108]);
+});
+
+// Goals (ticket 005)
+
+test('addGoal adds a goal at the bottom with a trimmed name', () => {
+  let state = addGoal(emptyState(), { name: '  New phone ', targetCents: 30000 });
+  state = addGoal(state, { name: 'Concert', targetCents: 8000 });
+  assert.deepEqual(state.goals.map((g) => [g.name, g.targetCents]), [['New phone', 30000], ['Concert', 8000]]);
+  assert.equal(new Set(state.goals.map((g) => g.id)).size, 2);
+});
+
+test('addGoal rejects an empty or too-long name and a bad target', () => {
+  const state = emptyState();
+  assert.throws(() => addGoal(state, { name: '   ', targetCents: 100 }), RangeError);
+  assert.throws(() => addGoal(state, { name: 'x'.repeat(41), targetCents: 100 }), RangeError);
+  assert.throws(() => addGoal(state, { name: 'Car', targetCents: 0 }), RangeError);
+  assert.throws(() => addGoal(state, { name: 'Car', targetCents: 99.5 }), RangeError);
+});
+
+test('there is a limit on how many goals you can have', () => {
+  let state = emptyState();
+  for (let i = 0; i < LIMITS.maxGoals; i++) state = addGoal(state, { name: `Goal ${i}`, targetCents: 100 });
+  assert.throws(() => addGoal(state, { name: 'One more', targetCents: 100 }), RangeError);
+  assertRejected('too many goals', (d) => {
+    d.goals = Array.from({ length: LIMITS.maxGoals + 1 }, (_, i) => ({ id: `g${i + 1}`, name: 'G', targetCents: 1 }));
+  });
+});
+
+test('updateGoal renames a goal and changes its target', () => {
+  let state = addGoal(emptyState(), { name: 'Phone', targetCents: 30000 });
+  const { id } = state.goals[0];
+  state = updateGoal(state, id, { name: 'Better phone', targetCents: 45000 });
+  assert.deepEqual(state.goals, [{ id, name: 'Better phone', targetCents: 45000 }]);
+  assert.throws(() => updateGoal(state, 'g99', { name: 'X', targetCents: 1 }), RangeError);
+  assert.throws(() => updateGoal(state, id, { name: '', targetCents: 1 }), RangeError);
+});
+
+test('removeGoal takes a goal off the list', () => {
+  let state = addGoal(emptyState(), { name: 'Phone', targetCents: 30000 });
+  state = addGoal(state, { name: 'Concert', targetCents: 8000 });
+  state = removeGoal(state, state.goals[0].id);
+  assert.deepEqual(state.goals.map((g) => g.name), ['Concert']);
+  assert.throws(() => removeGoal(state, 'g99'), RangeError);
+});
+
+test('moveGoal moves a goal up or down, and does nothing past the ends', () => {
+  let state = emptyState();
+  for (const name of ['A', 'B', 'C']) state = addGoal(state, { name, targetCents: 100 });
+  const names = (s) => s.goals.map((g) => g.name).join('');
+  const id = (name) => state.goals.find((g) => g.name === name).id;
+  assert.equal(names(moveGoal(state, id('C'), -1)), 'ACB');
+  assert.equal(names(moveGoal(state, id('A'), 1)), 'BAC');
+  assert.equal(names(moveGoal(state, id('A'), -1)), 'ABC');
+  assert.equal(names(moveGoal(state, id('C'), 1)), 'ABC');
+  assert.throws(() => moveGoal(state, 'g99', 1), RangeError);
 });

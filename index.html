@@ -80,6 +80,38 @@
         </ul>
       </section>
 
+      <section class="card" aria-labelledby="goals-title">
+        <h2 id="goals-title" tabindex="-1">Goals</h2>
+        <p id="goals-empty" class="hint">No goals yet. What are you saving up for?</p>
+        <p id="goals-basis" class="hint">Your Goals bucket fills these from the top down. Weeks to go are based on
+          your take-home pay over the last 4 weeks.</p>
+        <ol id="goal-list" class="goal-list"></ol>
+        <p id="goals-unassigned" class="hint" hidden></p>
+        <p id="goal-list-error" class="error" role="alert"></p>
+        <p id="goal-list-result" class="result" role="status"></p>
+
+        <form id="goal-form" class="subform" novalidate>
+          <h3 id="goal-form-title">Add a goal</h3>
+          <div class="field">
+            <label for="goal-name">What are you saving for?</label>
+            <input id="goal-name" name="name" type="text" maxlength="40" autocomplete="off" aria-describedby="goal-error">
+          </div>
+          <div class="field">
+            <label for="goal-target">How much does it cost?</label>
+            <div class="money-input">
+              <span aria-hidden="true">$</span>
+              <input id="goal-target" name="target" type="text" inputmode="decimal" autocomplete="off"
+                     aria-describedby="goal-error">
+            </div>
+          </div>
+          <p id="goal-error" class="error" role="alert"></p>
+          <div class="actions">
+            <button type="submit" id="goal-submit" class="primary">Add goal</button>
+            <button type="button" id="goal-cancel" hidden>Cancel</button>
+          </div>
+        </form>
+      </section>
+
       <section class="card" aria-labelledby="paycheck-title">
         <h2 id="paycheck-title">Log a paycheck</h2>
         <form id="paycheck-form" novalidate>

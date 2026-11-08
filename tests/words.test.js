@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate } from '../src/words.js';
+import {
+  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote,
+} from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
   assert.equal(
@@ -49,4 +51,50 @@ test('shortDate shows a date like "Nov 7, 2026" without time-zone surprises', ()
   assert.equal(shortDate('2026-11-07'), 'Nov 7, 2026');
   assert.equal(shortDate('2026-01-01'), 'Jan 1, 2026');
   assert.equal(shortDate('2025-12-31'), 'Dec 31, 2025');
+});
+
+// Goals (ticket 005)
+
+test('goalStatus says how many weeks are left in plain words', () => {
+  const base = { savedCents: 2500, targetCents: 10000, averageWeeklyCents: 5000, goalsPercent: 20 };
+  assert.equal(goalStatus({ ...base, weeks: 5 }), 'About 5 weeks to go.');
+  assert.equal(goalStatus({ ...base, weeks: 1 }), 'About 1 week to go.');
+});
+
+test('goalStatus with no recent pay asks for a paycheck instead of showing Infinity', () => {
+  const status = goalStatus({ savedCents: 0, targetCents: 10000, weeks: Infinity, averageWeeklyCents: 0, goalsPercent: 20 });
+  assert.equal(status, 'Log a paycheck to see a date.');
+});
+
+test('goalStatus when the split sends nothing to Goals', () => {
+  const status = goalStatus({ savedCents: 0, targetCents: 10000, weeks: Infinity, averageWeeklyCents: 5000, goalsPercent: 0 });
+  assert.equal(status, "Your split puts 0% into Goals, so this won't fill up. Change your split to get here.");
+});
+
+test('goalStatus when recent pay is too small to give a date', () => {
+  const status = goalStatus({ savedCents: 0, targetCents: 10000, weeks: Infinity, averageWeeklyCents: 1, goalsPercent: 20 });
+  assert.equal(status, 'Your recent pay is too small to give a date yet.');
+});
+
+test('goalStatus says when a goal is finished', () => {
+  const status = goalStatus({ savedCents: 10000, targetCents: 10000, weeks: 0, averageWeeklyCents: 0, goalsPercent: 20 });
+  assert.equal(status, 'Done! You saved enough for this.');
+});
+
+test('goalProgress shows saved out of target', () => {
+  assert.equal(goalProgress(2500, 10000), '$25.00 of $100.00 saved');
+});
+
+test('unassignedNote points out Goals money that no goal is using', () => {
+  assert.equal(unassignedNote(0, true), '');
+  assert.equal(unassignedNote(1500, true), 'You have $15.00 in Goals that no goal needs right now. Add a goal to put it to work.');
+  assert.equal(unassignedNote(1500, false), 'You have $15.00 in Goals. Add a goal to start filling it.');
+});
+
+test('goalStatus adds years when the wait is long, so big numbers make sense', () => {
+  const base = { savedCents: 0, targetCents: 10000, averageWeeklyCents: 5000, goalsPercent: 20 };
+  assert.equal(goalStatus({ ...base, weeks: 51 }), 'About 51 weeks to go.');
+  assert.equal(goalStatus({ ...base, weeks: 52 }), "About 52 weeks to go. That's about a year.");
+  assert.equal(goalStatus({ ...base, weeks: 80 }), "About 80 weeks to go. That's over a year.");
+  assert.equal(goalStatus({ ...base, weeks: 223 }), "About 223 weeks to go. That's about 4 years.");
 });

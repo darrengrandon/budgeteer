@@ -13,13 +13,27 @@ import {
   removePurchase,
   OverspendError,
   recentActivity,
+  addGoal,
+  updateGoal,
+  removeGoal,
+  moveGoal,
   setSplit,
   balances,
   paycheckParts,
 } from './storage.js';
-import { formatCents } from './money.js';
+import { formatCents, centsToInput } from './money.js';
 import { localISODate } from './budget.js';
-import { paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate } from './words.js';
+import { projectGoals } from './goals.js';
+import {
+  paycheckSentence,
+  splitTotalHint,
+  overspendMessage,
+  purchaseSentence,
+  shortDate,
+  goalStatus,
+  goalProgress,
+  unassignedNote,
+} from './words.js';
 import { readAmount, readPastDate, readSplitInputs, toPercent } from './forms.js';
 
 /** @typedef {import('./storage.js').State} State */
@@ -271,6 +285,176 @@ el('purchase-form').addEventListener('submit', (event) => {
 });
 
 // ---------------------------------------------------------------------------
+// Goals: add, edit, remove, reorder
+
+const goalName = inputEl('goal-name');
+const goalTarget = inputEl('goal-target');
+/** The id of the goal being edited, or null when the form adds a new goal. */
+let editingGoalId = /** @type {string | null} */ (null);
+
+for (const input of [goalName, goalTarget]) {
+  input.addEventListener('input', () => clearError('goal-error', [goalName, goalTarget]));
+}
+
+/** Put the goal form back to "Add a goal". */
+function resetGoalForm() {
+  editingGoalId = null;
+  goalName.value = '';
+  goalTarget.value = '';
+  el('goal-form-title').textContent = 'Add a goal';
+  el('goal-submit').textContent = 'Add goal';
+  el('goal-cancel').hidden = true;
+}
+
+el('goal-cancel').addEventListener('click', () => {
+  clearMessages();
+  resetGoalForm();
+  el('goals-title').focus();
+});
+
+el('goal-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!state) return;
+  clearMessages();
+
+  const name = goalName.value.trim();
+  if (name === '') {
+    showError('goal-error', 'Give your goal a name, like "New phone".', [goalName]);
+    return;
+  }
+  const target = readAmount(goalTarget.value);
+  if (!target.ok) {
+    showError('goal-error', target.error, [goalTarget]);
+    return;
+  }
+
+  let next;
+  try {
+    next = editingGoalId
+      ? updateGoal(state, editingGoalId, { name, targetCents: target.cents })
+      : addGoal(state, { name, targetCents: target.cents });
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    showError('goal-error', error.message, [goalName]);
+    return;
+  }
+  const wasEditing = editingGoalId !== null;
+  commit(next);
+  resetGoalForm();
+  el('goal-list-result').textContent = wasEditing ? `Saved changes to "${name}".` : `Added "${name}".`;
+});
+
+el('goal-list').addEventListener('click', (event) => {
+  const button = /** @type {HTMLElement} */ (event.target).closest('button[data-action]');
+  if (!(button instanceof HTMLButtonElement) || !state) return;
+  const { id, action } = button.dataset;
+  const goal = state.goals.find((g) => g.id === id);
+  if (!id || !goal) return;
+  clearMessages();
+
+  if (action === 'up' || action === 'down') {
+    commit(moveGoal(state, id, action === 'up' ? -1 : 1));
+    // Keep focus on the goal that moved, so pressing the button again keeps moving it.
+    const same = document.querySelector(`#goal-list button[data-id="${id}"][data-action="${action}"]`);
+    const other = document.querySelector(`#goal-list button[data-id="${id}"][data-action="${action === 'up' ? 'down' : 'up'}"]`);
+    const target = same instanceof HTMLButtonElement && !same.disabled ? same : other;
+    if (target instanceof HTMLElement) target.focus();
+  } else if (action === 'edit') {
+    editingGoalId = id;
+    goalName.value = goal.name;
+    goalTarget.value = centsToInput(goal.targetCents);
+    el('goal-form-title').textContent = `Edit "${goal.name}"`;
+    el('goal-submit').textContent = 'Save changes';
+    el('goal-cancel').hidden = false;
+    goalName.focus();
+  } else if (action === 'remove') {
+    if (!window.confirm(`Remove the goal "${goal.name}"? The money saved for it stays in your Goals bucket.`)) return;
+    commit(removeGoal(state, id));
+    if (editingGoalId === id) resetGoalForm();
+    el('goal-list-result').textContent = `Removed "${goal.name}". Its money stays in your Goals bucket for your other goals.`;
+    el('goals-title').focus();
+  }
+});
+
+/**
+ * @param {string} label
+ * @param {string} action
+ * @param {string} id
+ * @param {string} ariaLabel
+ * @returns {HTMLButtonElement}
+ */
+function goalButton(label, action, id, ariaLabel) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = action === 'remove' ? 'small danger' : 'small';
+  button.textContent = label;
+  button.dataset.action = action;
+  button.dataset.id = id;
+  button.setAttribute('aria-label', ariaLabel);
+  return button;
+}
+
+/** @param {State} current */
+function renderGoals(current) {
+  const projection = projectGoals(current, localISODate());
+  const count = current.goals.length;
+
+  el('goal-list').replaceChildren(...projection.goals.map(({ goal, savedCents, weeks }, index) => {
+    const done = savedCents >= goal.targetCents;
+    const li = document.createElement('li');
+    li.className = done ? 'goal done' : 'goal';
+
+    const head = document.createElement('div');
+    head.className = 'goal-head';
+    const name = document.createElement('h3');
+    name.className = 'goal-name';
+    name.textContent = goal.name;
+    const progressText = document.createElement('span');
+    progressText.className = 'goal-progress-text';
+    progressText.textContent = goalProgress(savedCents, goal.targetCents);
+    head.append(name, progressText);
+
+    const bar = document.createElement('progress');
+    bar.max = goal.targetCents;
+    bar.value = savedCents;
+    bar.setAttribute('aria-label', `${goal.name}: ${goalProgress(savedCents, goal.targetCents)}`);
+
+    const status = document.createElement('p');
+    status.className = 'goal-status';
+    status.textContent = goalStatus({
+      savedCents,
+      targetCents: goal.targetCents,
+      weeks,
+      averageWeeklyCents: projection.averageWeeklyCents,
+      goalsPercent: projection.goalsPercent,
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'actions goal-actions';
+    if (count > 1) {
+      const up = goalButton('↑ Up', 'up', goal.id, `Move ${goal.name} up`);
+      up.disabled = index === 0;
+      const down = goalButton('↓ Down', 'down', goal.id, `Move ${goal.name} down`);
+      down.disabled = index === count - 1;
+      actions.append(up, down);
+    }
+    actions.append(
+      goalButton('Edit', 'edit', goal.id, `Edit ${goal.name}`),
+      goalButton('Remove', 'remove', goal.id, `Remove ${goal.name}`),
+    );
+
+    li.append(head, bar, status, actions);
+    return li;
+  }));
+
+  el('goals-empty').hidden = count > 0;
+  el('goals-basis').hidden = count === 0;
+  const note = unassignedNote(projection.unassignedCents, count > 0);
+  el('goals-unassigned').textContent = note;
+  el('goals-unassigned').hidden = note === '';
+}
+
+// ---------------------------------------------------------------------------
 // Recent activity, with Remove buttons to fix mistakes
 
 const HISTORY_LIMIT = 20;
@@ -365,6 +549,7 @@ function render() {
   el('purchase-available').textContent = totals.spend > 0
     ? `You have ${formatCents(totals.spend)} to spend.`
     : 'Your Spend bucket is empty. Log a paycheck first.';
+  renderGoals(state);
   renderHistory(state);
 }
 

@@ -357,3 +357,103 @@ button.danger {
 .history-amount.in {
   color: var(--ok);
 }
+
+/* Goals */
+
+.goal-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.goal {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.goal:first-child {
+  border-top: 0;
+  padding-top: 0.25rem;
+}
+
+.goal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.goal-progress-text {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+progress {
+  display: block;
+  width: 100%;
+  height: 0.8rem;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: var(--track);
+  color: var(--goals);
+  overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+  background: var(--track);
+  border-radius: 999px;
+}
+
+progress::-webkit-progress-value {
+  background: var(--goals);
+  border-radius: 999px;
+}
+
+progress::-moz-progress-bar {
+  background: var(--goals);
+  border-radius: 999px;
+}
+
+.goal.done progress::-webkit-progress-value {
+  background: var(--ok);
+}
+
+.goal.done progress::-moz-progress-bar {
+  background: var(--ok);
+}
+
+.goal-status {
+  margin: 0.4rem 0 0.5rem;
+  font-weight: 600;
+}
+
+.goal.done .goal-status {
+  color: var(--ok);
+}
+
+.goal-actions {
+  gap: 0.4rem;
+}
+
+.subform {
+  border-top: 1px solid var(--border);
+  padding-top: 0.9rem;
+}
+
+.subform h3 {
+  margin-bottom: 0.6rem;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  border-color: var(--border);
+}

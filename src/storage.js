@@ -25,6 +25,7 @@ export const LIMITS = Object.freeze({
   /** Largest single amount: $1,000,000. Keeps every sum far inside safe integers. */
   maxCents: 100_000_000,
   maxRecords: 50_000,
+  maxGoals: 50,
   maxNoteLength: 80,
   maxGoalNameLength: 40,
   /** A real backup is far smaller; browsers cap saved data at about 5 million characters. */
@@ -217,7 +218,9 @@ export function validateState(data) {
     });
 
     const goalIds = new Set();
-    const goals = readList(top.goals, 'The goals').map((item, i) => {
+    const goalList = readList(top.goals, 'The goals');
+    if (goalList.length > LIMITS.maxGoals) throw new RangeError(`The backup has more than ${LIMITS.maxGoals} goals.`);
+    const goals = goalList.map((item, i) => {
       const where = `Goal ${i + 1}`;
       const g = readObject(item, ['id', 'name', 'targetCents'], where);
       return {
@@ -371,6 +374,76 @@ export function removePaycheck(state, id) {
  */
 export function setSplit(state, split) {
   return { ...state, split: readSplit({ ...split }, 'The split') };
+}
+
+// ---------------------------------------------------------------------------
+// Goals. Their order is their priority: Goals-bucket money fills them top to bottom.
+
+/**
+ * @param {State} state
+ * @param {string} id
+ * @returns {number}
+ */
+function goalIndex(state, id) {
+  const index = state.goals.findIndex((g) => g.id === id);
+  if (index === -1) throw new RangeError(`No goal with id ${id}`);
+  return index;
+}
+
+/**
+ * Add a goal at the bottom of the list.
+ * @param {State} state
+ * @param {{ name: string, targetCents: number }} goal
+ * @returns {State}
+ */
+export function addGoal(state, { name, targetCents }) {
+  if (state.goals.length >= LIMITS.maxGoals) throw new RangeError(`You can have up to ${LIMITS.maxGoals} goals.`);
+  const record = {
+    id: nextId('g', state.goals),
+    name: readName(name, 'The name').trim(),
+    targetCents: readCents(targetCents, 'The target'),
+  };
+  return { ...state, goals: [...state.goals, record] };
+}
+
+/**
+ * Rename a goal and/or change its target.
+ * @param {State} state
+ * @param {string} id
+ * @param {{ name: string, targetCents: number }} changes
+ * @returns {State}
+ */
+export function updateGoal(state, id, { name, targetCents }) {
+  const index = goalIndex(state, id);
+  const record = { id, name: readName(name, 'The name').trim(), targetCents: readCents(targetCents, 'The target') };
+  return { ...state, goals: state.goals.map((g, i) => (i === index ? record : g)) };
+}
+
+/**
+ * Delete a goal. Its money stays in the Goals bucket for the goals below it.
+ * @param {State} state
+ * @param {string} id
+ * @returns {State}
+ */
+export function removeGoal(state, id) {
+  goalIndex(state, id);
+  return { ...state, goals: state.goals.filter((g) => g.id !== id) };
+}
+
+/**
+ * Move a goal one place up (-1) or down (+1). Past either end, nothing changes.
+ * @param {State} state
+ * @param {string} id
+ * @param {-1 | 1} direction
+ * @returns {State}
+ */
+export function moveGoal(state, id, direction) {
+  const from = goalIndex(state, id);
+  const to = from + direction;
+  if (to < 0 || to >= state.goals.length) return state;
+  const goals = [...state.goals];
+  [goals[from], goals[to]] = [goals[to], goals[from]];
+  return { ...state, goals };
 }
 
 /**

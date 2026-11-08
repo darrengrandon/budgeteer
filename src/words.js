@@ -62,3 +62,53 @@ export function shortDate(iso) {
   const [year, month, day] = iso.split('-').map(Number);
   return `${MONTHS[month - 1]} ${day}, ${year}`;
 }
+
+/**
+ * The line under each goal's progress bar.
+ * @param {{ savedCents: number, targetCents: number, weeks: number, averageWeeklyCents: number, goalsPercent: number }} args
+ * @returns {string}
+ */
+export function goalStatus({ savedCents, targetCents, weeks, averageWeeklyCents, goalsPercent }) {
+  if (savedCents >= targetCents) return 'Done! You saved enough for this.';
+  if (averageWeeklyCents <= 0) return 'Log a paycheck to see a date.';
+  if (goalsPercent === 0) return "Your split puts 0% into Goals, so this won't fill up. Change your split to get here.";
+  if (!Number.isFinite(weeks)) return 'Your recent pay is too small to give a date yet.';
+  if (weeks === 1) return 'About 1 week to go.';
+  return `About ${weeks} weeks to go.${yearsHint(weeks)}`;
+}
+
+/**
+ * For long waits, say it in years too: 223 weeks means little at a glance.
+ * @param {number} weeks
+ * @returns {string}
+ */
+function yearsHint(weeks) {
+  if (weeks < 52) return '';
+  if (weeks === 52) return " That's about a year.";
+  if (weeks < 104) return " That's over a year.";
+  return ` That's about ${Math.round(weeks / 52)} years.`;
+}
+
+/**
+ * "$25.00 of $100.00 saved"
+ * @param {number} savedCents
+ * @param {number} targetCents
+ * @returns {string}
+ */
+export function goalProgress(savedCents, targetCents) {
+  return `${formatCents(savedCents)} of ${formatCents(targetCents)} saved`;
+}
+
+/**
+ * A note for money in the Goals bucket beyond every goal's target.
+ * @param {number} unassignedCents
+ * @param {boolean} hasGoals
+ * @returns {string} empty when there is nothing to say
+ */
+export function unassignedNote(unassignedCents, hasGoals) {
+  if (unassignedCents <= 0) return '';
+  const amount = formatCents(unassignedCents);
+  return hasGoals
+    ? `You have ${amount} in Goals that no goal needs right now. Add a goal to put it to work.`
+    : `You have ${amount} in Goals. Add a goal to start filling it.`;
+}

@@ -2,7 +2,7 @@
 id: 005
 title: Goals with progress and weeks to go
 depends_on: [002, 003]
-status: todo
+status: done
 ---
 
 ## Goal
