@@ -1,0 +1,26 @@
+# Context: the words Budgeteer uses
+
+The same words appear on screen, in SPEC.md, in tickets and in code. If you add a word,
+add it here.
+
+| Word | Meaning | In code |
+|---|---|---|
+| **Paycheck** | Take-home pay the teen logs: an amount in cents and a date (today when logged in the app). Keeps the split it was logged with. | `state.paychecks`, `addPaycheck` |
+| **Payday** | A date with one or more paychecks. Two paychecks on the same day are one payday. | `paydays()` in `src/pay.js` |
+| **Usual gap** | The median number of days between the last 6 paydays; 14 when there is only one payday. | `usualGapDays()` |
+| **Weekly pay** | Average payday amount × 7 ÷ usual gap. Kept as an exact fraction `{ cents, days }` (cents earned per that many days) so nothing is rounded early. | `weeklyPay()` |
+| **Split** | Three whole percents for Spend, Save and Goals that total 100. Starts at 50/30/20. | `state.split` |
+| **Bucket** | Spend, Save or Goals. Its balance is always calculated from the records. | `balances()` |
+| **Spend about $X a week** | The home headline: weekly pay × Spend percent, in whole dollars. | `spendHeadline()` |
+| **Goal** | Something the teen saves for: a name and a price (`targetCents`). Goals are in priority order. | `state.goals` |
+| **Top goal** | The first goal. It gets Goals money first and is shown big on Home. | `state.goals[0]` |
+| **Funded** | A goal whose whole price is covered by Goals money (after the goals above it). | `allocateToGoals()` |
+| **Ready in about N weeks** | Weeks until a goal is funded at the current weekly pay and Goals percent, rounded up, with a date. | `readyLine()` |
+| **Buy it** | Recording that a funded goal was bought: the real price (at most the goal's price) leaves Goals, the goal is removed, a goal purchase is kept. | `buyGoal()`, `state.goalPurchases` |
+| **Goal purchase** | The record a Buy it leaves behind: date, cents, goal name. Undoing it puts the money back in Goals. | `removeGoalPurchase()` |
+| **Track my spending** | A setting, off by default. When on, the teen can log purchases from Spend and see what is left. | `state.settings.trackSpending` |
+| **Purchase** | Money spent from Spend, only logged while tracking is on. Never more than what is left. | `state.purchases`, `addPurchase` |
+| **Got paid? Log it.** | The nudge shown when the last payday is more than the usual gap plus 2 days ago. | `gotPaidDue()` |
+| **Sheet** | A panel that slides up from the bottom (paycheck, buy it, purchase, goal). Built on `<dialog>`. | `.sheet` |
+| **History** | Every paycheck, purchase and goal purchase, newest first, in Settings. The place to fix mistakes. | `recentActivity()` |
+| **Version 1 / version 2** | The saved-data format. Version 1 is upgraded to version 2 on load and restore. | `upgradeState()` |

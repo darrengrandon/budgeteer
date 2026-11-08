@@ -2,8 +2,8 @@
 id: 010
 title: "Bought it": spend a finished goal's money
 depends_on: [009]
-status: todo
-needs_owner_approval: true
+status: replaced
+replaced_by: [011, 013, 016]
 ---
 
 ## Why
