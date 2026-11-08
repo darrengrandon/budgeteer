@@ -10,7 +10,12 @@ import { splitIncome, isISODate, dayNumber } from './budget.js';
  *   spend/save/goals are the percents in effect when the paycheck was logged.
  * @typedef {{ id: string, date: string, cents: number, note: string }} Purchase
  * @typedef {{ id: string, name: string, targetCents: number }} Goal
- * @typedef {{ version: 1, split: Split, paychecks: Paycheck[], purchases: Purchase[], goals: Goal[] }} State
+ * @typedef {{ id: string, date: string, cents: number, name: string }} GoalPurchase
+ *   A funded goal that was bought: cents came out of Goals; name is the goal's name.
+ * @typedef {{ trackSpending: boolean }} Settings
+ * @typedef {{ version: 1 | 2, split: Split, paychecks: Paycheck[], purchases: Purchase[], goals: Goal[],
+ *   settings?: Settings, goalPurchases?: GoalPurchase[] }} State
+ *   Version 2 always has settings and goalPurchases (docs/adr/0003). The app uses version 2.
  * @typedef {{ getItem(key: string): string | null, setItem(key: string, value: string): void }} StorageLike
  * @typedef {{ ok: true, state: State } | { ok: false, error: string }} ValidationResult
  */
@@ -41,7 +46,14 @@ export const DAMAGED_WARNING =
 
 const SPLIT_KEYS = /** @type {const} */ (['spend', 'save', 'goals']);
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/;
-const ID_PATTERN = { paycheck: /^p[1-9]\d{0,8}$/, purchase: /^b[1-9]\d{0,8}$/, goal: /^g[1-9]\d{0,8}$/ };
+const ID_PATTERN = {
+  paycheck: /^p[1-9]\d{0,8}$/,
+  purchase: /^b[1-9]\d{0,8}$/,
+  goal: /^g[1-9]\d{0,8}$/,
+  goalPurchase: /^x[1-9]\d{0,8}$/,
+};
+const V1_KEYS = ['version', 'split', 'paychecks', 'purchases', 'goals'];
+const V2_KEYS = ['version', 'split', 'settings', 'paychecks', 'purchases', 'goals', 'goalPurchases'];
 
 // ---------------------------------------------------------------------------
 // Field readers. Each one checks an untrusted value and returns a clean copy,
@@ -197,8 +209,10 @@ export function validateState(data, todayISO) {
     return date;
   };
   try {
-    const top = readObject(data, ['version', 'split', 'paychecks', 'purchases', 'goals'], 'The backup');
-    if (top.version !== 1) throw new RangeError('The backup is from a different version of Budgeteer.');
+    if (!isPlainObject(data)) throw new RangeError('The backup is not in the right format.');
+    const { version } = data;
+    if (version !== 1 && version !== 2) throw new RangeError('The backup is from a different version of Budgeteer.');
+    const top = readObject(data, version === 1 ? V1_KEYS : V2_KEYS, 'The backup');
 
     const split = readSplit(top.split, 'The split');
 
@@ -240,8 +254,28 @@ export function validateState(data, todayISO) {
     });
 
     /** @type {State} */
-    const state = { version: 1, split, paychecks, purchases, goals };
-    if (balances(state).spend < 0) throw new RangeError('The purchases add up to more than was ever in Spend.');
+    let state = { version: 1, split, paychecks, purchases, goals };
+    if (version === 2) {
+      const settings = readObject(top.settings, ['trackSpending'], 'The settings');
+      if (typeof settings.trackSpending !== 'boolean') throw new RangeError('The tracking setting must be true or false.');
+      const goalPurchaseIds = new Set();
+      const goalPurchases = readList(top.goalPurchases, 'The goal buys').map((item, i) => {
+        const where = `Goal buy ${i + 1}`;
+        const x = readObject(item, ['id', 'date', 'cents', 'name'], where);
+        return {
+          id: readId(x.id, ID_PATTERN.goalPurchase, goalPurchaseIds, where),
+          date: readRecordDate(x.date, `${where}'s date`),
+          cents: readCents(x.cents, `${where}'s amount`),
+          name: readName(x.name, `${where}'s name`),
+        };
+      });
+      state = {
+        version: 2, split, settings: { trackSpending: settings.trackSpending }, paychecks, purchases, goals, goalPurchases,
+      };
+    }
+    const totals = balances(state);
+    if (totals.spend < 0) throw new RangeError('The purchases add up to more than was ever in Spend.');
+    if (totals.goals < 0) throw new RangeError('The goal buys add up to more than was saved for goals.');
     return { ok: true, state };
   } catch (error) {
     if (error instanceof RangeError) return { ok: false, error: error.message };
@@ -253,7 +287,59 @@ export function validateState(data, todayISO) {
 // State and balances.
 
 /**
- * A fresh state with no records.
+ * A fresh version 2 state: no records, tracking off. This is what the app starts with.
+ * @param {Split} [split]
+ * @returns {State}
+ */
+export function newState(split = DEFAULT_SPLIT) {
+  return upgradeState(emptyState(split));
+}
+
+/**
+ * Turn version 1 into version 2, keeping every record. Tracking starts on if there are
+ * purchases, so nobody who logged purchases loses sight of them. Version 2 passes through.
+ * @param {State} state
+ * @returns {State}
+ */
+export function upgradeState(state) {
+  if (state.version === 2) return state;
+  return {
+    version: 2,
+    split: state.split,
+    settings: { trackSpending: state.purchases.length > 0 },
+    paychecks: state.paychecks,
+    purchases: state.purchases,
+    goals: state.goals,
+    goalPurchases: [],
+  };
+}
+
+/**
+ * Turn "Track my spending" on or off. Hides or shows purchases; never deletes them.
+ * @param {State} state a version 2 state
+ * @param {boolean} on
+ * @returns {State}
+ */
+export function setTrackSpending(state, on) {
+  if (state.version !== 2) throw new RangeError('Upgrade the state to version 2 first.');
+  if (typeof on !== 'boolean') throw new RangeError('Tracking must be true or false.');
+  return { ...state, settings: { ...state.settings, trackSpending: on } };
+}
+
+/**
+ * Undo a goal buy: its money goes back into Goals.
+ * @param {State} state
+ * @param {string} id
+ * @returns {State}
+ */
+export function removeGoalPurchase(state, id) {
+  const list = state.goalPurchases ?? [];
+  if (!list.some((x) => x.id === id)) throw new RangeError(`No goal buy with id ${id}`);
+  return { ...state, goalPurchases: list.filter((x) => x.id !== id) };
+}
+
+/**
+ * A fresh version 1 state with no records (kept for version 1 callers and tests).
  * @param {Split} [split]
  * @returns {State}
  */
@@ -276,6 +362,7 @@ export function balances(state) {
     total.goals += parts.goals;
   }
   for (const b of state.purchases) total.spend -= b.cents;
+  for (const x of state.goalPurchases ?? []) total.goals -= x.cents;
   return total;
 }
 
@@ -295,7 +382,7 @@ const MAX_ID_NUMBER = 999_999_999;
 /**
  * The next free id like "p4" for a list of records: one more than the highest, or, if that
  * would be too long (only possible after restoring a hand-edited backup), the lowest unused.
- * @param {'p' | 'b' | 'g'} prefix
+ * @param {'p' | 'b' | 'g' | 'x'} prefix
  * @param {{ id: string }[]} records
  * @returns {string}
  */
@@ -395,7 +482,8 @@ export function removePurchase(state, id) {
 
 /**
  * Remove a paycheck logged by mistake. Throws an OverspendError if part of it was already
- * spent, so Spend would drop below zero.
+ * spent (Spend would drop below zero), or a GoalMoneyUsedError if its goal money already
+ * bought a goal (Goals would drop below zero).
  * @param {State} state
  * @param {string} id
  * @returns {State}
@@ -403,8 +491,18 @@ export function removePurchase(state, id) {
 export function removePaycheck(state, id) {
   if (!state.paychecks.some((p) => p.id === id)) throw new RangeError(`No paycheck with id ${id}`);
   const next = { ...state, paychecks: state.paychecks.filter((p) => p.id !== id) };
-  if (balances(next).spend < 0) throw new OverspendError(balances(state).spend);
+  const after = balances(next);
+  if (after.spend < 0) throw new OverspendError(balances(state).spend);
+  if (after.goals < 0) throw new GoalMoneyUsedError();
   return next;
+}
+
+/** Thrown when removing a paycheck would take back goal money that already bought a goal. */
+export class GoalMoneyUsedError extends RangeError {
+  constructor() {
+    super('That goal money was already used to buy something.');
+    this.name = 'GoalMoneyUsedError';
+  }
 }
 
 /**

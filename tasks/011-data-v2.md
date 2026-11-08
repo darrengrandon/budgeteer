@@ -2,7 +2,7 @@
 id: 011
 title: Saved data version 2 (settings and goal purchases)
 depends_on: [009]
-status: todo
+status: done
 ---
 
 ## Goal

@@ -26,6 +26,12 @@ import {
   DAMAGED_KEY,
   readSaved,
   saveChecked,
+  newState,
+  upgradeState,
+  setTrackSpending,
+  removeGoalPurchase,
+  GoalMoneyUsedError,
+  nextId,
 } from '../src/storage.js';
 
 /** A fake localStorage that keeps items in a Map. */
@@ -587,4 +593,137 @@ test('C3: saveChecked never writes a state that would not load again', () => {
 test('U1: saveChecked reports failure when storage is off', () => {
   assert.equal(saveChecked(brokenStorage, emptyState(), null).status, 'failed');
   assert.equal(saveChecked(null, emptyState(), null).status, 'failed');
+});
+
+// Saved data version 2 (ticket 011, docs/adr/0003)
+
+/** A valid version 2 state: the v1 sample, upgraded, with one goal purchase. */
+function sampleV2() {
+  const state = upgradeState(sampleState());
+  return { ...state, goalPurchases: [{ id: 'x1', date: '2026-11-06', cents: 500, name: 'Shoes' }] };
+}
+
+test('newState is an empty version 2 state with tracking off', () => {
+  assert.deepEqual(newState(), {
+    version: 2,
+    split: { spend: 50, save: 30, goals: 20 },
+    settings: { trackSpending: false },
+    paychecks: [],
+    purchases: [],
+    goals: [],
+    goalPurchases: [],
+  });
+});
+
+test('upgradeState keeps every version 1 record and turns tracking on if there are purchases', () => {
+  const v1 = sampleState();
+  const v2 = upgradeState(v1);
+  assert.equal(v2.version, 2);
+  assert.deepEqual(v2.settings, { trackSpending: true });
+  assert.deepEqual(v2.split, v1.split);
+  assert.deepEqual(v2.paychecks, v1.paychecks);
+  assert.deepEqual(v2.purchases, v1.purchases);
+  assert.deepEqual(v2.goals, v1.goals);
+  assert.deepEqual(v2.goalPurchases, []);
+  assert.deepEqual(balances(v2), balances(v1));
+});
+
+test('upgradeState leaves tracking off when there are no purchases, and passes version 2 through', () => {
+  const v2 = upgradeState(addPaycheck(emptyState(), { date: '2026-11-07', cents: 100 }));
+  assert.deepEqual(v2.settings, { trackSpending: false });
+  assert.deepEqual(upgradeState(sampleV2()), sampleV2());
+});
+
+test('a version 1 backup restores and upgrades with nothing lost', () => {
+  const result = importBackup(exportBackup(sampleState()));
+  assert.equal(result.ok, true);
+  const upgraded = upgradeState(result.state);
+  assert.equal(upgraded.paychecks.length, 2);
+  assert.equal(upgraded.purchases.length, 1);
+  assert.equal(upgraded.goals.length, 1);
+});
+
+test('version 2 validates, round-trips through a backup, and loads from storage', () => {
+  assert.deepEqual(validateState(sampleV2()), { ok: true, state: sampleV2() });
+  assert.deepEqual(importBackup(exportBackup(sampleV2())), { ok: true, state: sampleV2() });
+  const storage = fakeStorage();
+  assert.equal(saveChecked(storage, sampleV2(), null).status, 'saved');
+  assert.deepEqual(loadState(storage), { state: sampleV2(), warning: null });
+});
+
+test('balances take goal purchases out of Goals only', () => {
+  // sampleState: spend 5626, save 4275, goals 2850. The goal purchase takes 500 from Goals.
+  assert.deepEqual(balances(sampleV2()), { spend: 5626, save: 4275, goals: 2350 });
+});
+
+/**
+ * @param {string} label
+ * @param {(data: any) => void} breakIt
+ */
+function assertRejectedV2(label, breakIt) {
+  const data = JSON.parse(exportBackup(sampleV2()));
+  breakIt(data);
+  const result = importBackup(JSON.stringify(data));
+  assert.equal(result.ok, false, `should reject: ${label}`);
+  assert.equal(typeof result.error, 'string', label);
+}
+
+test('version 2 rejects bad settings and bad goal purchases', () => {
+  assertRejectedV2('missing settings', (d) => { delete d.settings; });
+  assertRejectedV2('missing goalPurchases', (d) => { delete d.goalPurchases; });
+  assertRejectedV2('settings has an extra key', (d) => { d.settings.admin = true; });
+  assertRejectedV2('trackSpending is not true or false', (d) => { d.settings.trackSpending = 'yes'; });
+  assertRejectedV2('settings is a list', (d) => { d.settings = [true]; });
+  assertRejectedV2('goalPurchases is not a list', (d) => { d.goalPurchases = {}; });
+  assertRejectedV2('goal purchase with a paycheck id', (d) => { d.goalPurchases[0].id = 'p1'; });
+  assertRejectedV2('duplicate goal purchase ids', (d) => { d.goalPurchases.push({ ...d.goalPurchases[0] }); });
+  assertRejectedV2('goal purchase cents as text', (d) => { d.goalPurchases[0].cents = '500'; });
+  assertRejectedV2('goal purchase with an empty name', (d) => { d.goalPurchases[0].name = ' '; });
+  assertRejectedV2('goal purchase with an extra field', (d) => { d.goalPurchases[0].html = '<b>'; });
+  assertRejectedV2('goal buys use more than was saved for goals', (d) => { d.goalPurchases[0].cents = 2851; });
+  assertRejectedV2('version 1 with version 2 fields', (d) => { d.version = 1; });
+});
+
+test('version 2 restore refuses goal purchases dated after tomorrow', () => {
+  const data = JSON.parse(exportBackup(sampleV2()));
+  data.goalPurchases[0].date = '2026-11-09';
+  const result = importBackup(JSON.stringify(data), '2026-11-07');
+  assert.equal(result.ok, false);
+  assert.match(result.error, /Goal buy 1's date is in the future/);
+});
+
+test('setTrackSpending switches tracking without touching any record', () => {
+  const before = sampleV2();
+  const off = setTrackSpending(before, false);
+  assert.equal(off.settings.trackSpending, false);
+  assert.deepEqual(off.purchases, before.purchases);
+  assert.equal(setTrackSpending(off, true).settings.trackSpending, true);
+  assert.equal(before.settings.trackSpending, true); // not mutated
+  assert.throws(() => setTrackSpending(before, 'on'), RangeError);
+  assert.throws(() => setTrackSpending(sampleState(), true), RangeError); // version 1 must be upgraded first
+});
+
+test('removeGoalPurchase puts the money back in Goals', () => {
+  const state = removeGoalPurchase(sampleV2(), 'x1');
+  assert.deepEqual(state.goalPurchases, []);
+  assert.equal(balances(state).goals, 2850);
+  assert.throws(() => removeGoalPurchase(state, 'x1'), RangeError);
+});
+
+test('removePaycheck is blocked when its goal money was already used to buy a goal', () => {
+  let state = addPaycheck(newState(), { date: '2026-11-01', cents: 10000 }); // 2000 to goals
+  state = { ...state, goalPurchases: [{ id: 'x1', date: '2026-11-07', cents: 1500, name: 'Shoes' }] };
+  const snapshot = structuredClone(state);
+  assert.throws(() => removePaycheck(state, state.paychecks[0].id), (error) => error instanceof GoalMoneyUsedError);
+  assert.deepEqual(state, snapshot);
+});
+
+test('new records in a version 2 state keep it version 2 and loadable', () => {
+  let state = newState();
+  state = addPaycheck(state, { date: '2026-11-07', cents: 10000 });
+  state = addGoal(state, { name: 'Phone', targetCents: 30000 });
+  state = setSplit(state, { spend: 40, save: 30, goals: 30 });
+  assert.equal(state.version, 2);
+  assert.equal(importBackup(exportBackup(state)).ok, true);
+  assert.equal(nextId('x', [{ id: 'x1' }, { id: 'x7' }]), 'x8');
 });
