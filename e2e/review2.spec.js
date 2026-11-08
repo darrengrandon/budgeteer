@@ -23,6 +23,7 @@ test('L1: the sheet says a paycheck was already logged, and a next-day duplicate
   await expect(page.locator('#pay-sheet').getByText('You already logged $312.47 yesterday.')).toBeVisible();
   await page.getByRole('button', { name: 'Same as last time ($312.47)' }).click();
   await page.getByRole('button', { name: 'Add paycheck' }).click();
+  await page.getByRole('button', { name: 'Yes, log another' }).click();
   await page.getByRole('button', { name: 'Done' }).click();
   // One payday of $624.94 every 2 weeks: $312.47 a week, half of it to spend. Not $1,094.
   await expect(page.locator('#headline')).toHaveText('Spend about $156 a week');

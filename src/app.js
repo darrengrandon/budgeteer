@@ -34,7 +34,7 @@ import {
 } from './storage.js';
 import { buyGoal } from './goals.js';
 import { centsToInput, formatCents } from './money.js';
-import { localISODate } from './budget.js';
+import { localISODate, addDays } from './budget.js';
 import { homePlan, backupDue } from './plan.js';
 import { missedPaydays } from './pay.js';
 import {
@@ -455,12 +455,13 @@ el('pay-form').addEventListener('submit', (event) => {
   }
 
   const today = localISODate();
-  // The same amount as a paycheck already logged today is probably a repeat: ask first.
-  // (The owner asked for "today or yesterday"; yesterday waits for their OK to change the
-  // review2 L1 test, which logs a repeat the next day. See overnight-review/OVERNIGHT-REPORT.md.)
-  const repeat = state.paychecks.find((p) => p.cents === amount.cents && p.date === today);
+  // The same amount as a paycheck logged today or yesterday is probably a repeat: ask first
+  // (SPEC.md decision 13).
+  const yesterday = addDays(today, -1);
+  const repeat = state.paychecks.find((p) => p.cents === amount.cents && (p.date === today || p.date === yesterday));
   if (repeat && !repeatConfirmed) {
-    showRepeatStep(`You already logged ${formatCents(amount.cents)} today. Log another paycheck?`);
+    const when = repeat.date === today ? 'today' : 'yesterday';
+    showRepeatStep(`You already logged ${formatCents(amount.cents)} ${when}. Log another paycheck?`);
     el('pay-repeat-no').focus();
     return;
   }

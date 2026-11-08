@@ -41,14 +41,13 @@ test('decision 2: "Yes, log another" saves the second paycheck', async ({ page }
   expect(await historyCount(page)).toBe(2);
 });
 
-test("decision 2 (today only for now): yesterday's amount, or a different amount, does not ask", async ({ page }) => {
-  // The owner asked for "today or yesterday". Yesterday is not done yet: it would change the
-  // review2 L1 test, which the overnight rules don't allow without the owner's OK.
+test("decision 2: yesterday's amount asks \"Log another paycheck?\", and a different amount does not", async ({ page }) => {
   await open(page);
   await seed(page, v2({ paychecks: [P('p1', '2026-11-06', 21240)] }));
   await tryToLog(page, '212.40');
-  await expect(page.getByText(/^Nice\. Your \$212\.40/)).toBeVisible();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('#pay-sheet').getByRole('alert')).toHaveText('You already logged $212.40 yesterday. Log another paycheck?');
+  await page.getByRole('button', { name: "No, it's already logged" }).click();
+  expect(await historyCount(page)).toBe(1);
   await tryToLog(page, '150');
   await expect(page.getByText(/^Nice\. Your \$150\.00/)).toBeVisible();
 });
