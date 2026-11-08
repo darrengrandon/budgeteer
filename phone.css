@@ -494,3 +494,47 @@ dialog.sheet::backdrop {
 .timeline li {
   margin: 0.3rem 0;
 }
+
+/* Goals on Home */
+
+.empty-goals {
+  margin: 1rem 0.25rem 0.75rem;
+}
+
+.wide {
+  width: 100%;
+  min-height: 52px;
+}
+
+#add-goal {
+  margin-top: 0.75rem;
+}
+
+.goal-head .icon-button {
+  margin: -0.5rem -0.5rem -0.5rem 0;
+  color: var(--muted);
+  flex: none;
+}
+
+.buy {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 0.85rem;
+  font-size: 1.1rem;
+}
+
+.goal-more {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.danger {
+  border: 1px solid var(--error);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--error);
+  font-weight: 600;
+}

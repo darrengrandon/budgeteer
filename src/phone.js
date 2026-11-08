@@ -12,13 +12,17 @@ import {
   saveChecked,
   addPaycheck,
   addGoal,
+  updateGoal,
+  removeGoal,
+  moveGoal,
   removePaycheck,
   paycheckParts,
 } from './storage.js';
+import { buyGoal } from './goals.js';
 import { centsToInput, formatCents } from './money.js';
 import { localISODate } from './budget.js';
 import { homePlan } from './plan.js';
-import { paycheckSentence, goalTimeline } from './words.js';
+import { paycheckSentence, goalTimeline, buySentence } from './words.js';
 import { readAmount } from './forms.js';
 
 /** @typedef {import('./storage.js').State} State */
@@ -297,6 +301,149 @@ el('pay-undo').addEventListener('click', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Goals: add, edit, move up, remove (the goal sheet), and Buy it (the buy sheet)
+
+const goalSheet = dialogEl('goal-sheet');
+const goalName = inputEl('goal-name');
+const goalPrice = inputEl('goal-price');
+const buySheet = dialogEl('buy-sheet');
+const buyPrice = inputEl('buy-price');
+/** The goal the open sheet is about (null: adding a new goal). */
+let sheetGoalId = /** @type {string | null} */ (null);
+
+for (const input of [goalName, goalPrice]) input.addEventListener('input', () => clearErrors(goalSheet));
+buyPrice.addEventListener('input', () => clearErrors(buySheet));
+
+/**
+ * Put focus back on a goal's Options button after its sheet closes.
+ * @param {string} id
+ */
+function focusGoal(id) {
+  const button = document.querySelector(`#goal-cards button[data-action="options"][data-id="${id}"]`);
+  if (button instanceof HTMLElement) button.focus();
+}
+
+/** @param {string | null} id null to add a new goal */
+function openGoalSheet(id) {
+  if (!state) return;
+  const goal = id ? state.goals.find((g) => g.id === id) : undefined;
+  sheetGoalId = goal ? goal.id : null;
+  clearErrors(goalSheet);
+  el('home-status').textContent = '';
+  goalName.value = goal ? goal.name : '';
+  goalPrice.value = goal ? centsToInput(goal.targetCents) : '';
+  el('goal-title').textContent = goal ? `Edit "${goal.name}"` : 'Add a goal';
+  el('goal-more').hidden = !goal;
+  el('goal-up').hidden = !goal || state.goals[0].id === goal.id;
+  openSheet(goalSheet);
+  goalName.focus();
+}
+
+el('add-goal').addEventListener('click', () => openGoalSheet(null));
+el('goal-cancel').addEventListener('click', () => goalSheet.close());
+
+el('goal-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!state) return;
+  clearErrors(goalSheet);
+  const name = goalName.value.trim();
+  if (name === '') {
+    showError('goal-name-error', 'Give your goal a name, like "New phone".', goalName);
+    return;
+  }
+  const price = readAmount(goalPrice.value);
+  if (!price.ok) {
+    showError('goal-price-error', price.error, goalPrice);
+    return;
+  }
+  let next;
+  try {
+    next = sheetGoalId
+      ? updateGoal(state, sheetGoalId, { name, targetCents: price.cents })
+      : addGoal(state, { name, targetCents: price.cents });
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    showError('goal-name-error', error.message, goalName);
+    return;
+  }
+  const editedId = sheetGoalId;
+  const savedName = editedId ? next.goals.find((g) => g.id === editedId)?.name : next.goals[next.goals.length - 1].name;
+  goalSheet.close();
+  if (!commit(next)) return;
+  el('home-status').textContent = editedId ? `Saved "${savedName}".` : `Added "${savedName}".`;
+  focusGoal(editedId ?? next.goals[next.goals.length - 1].id);
+});
+
+el('goal-up').addEventListener('click', () => {
+  if (!state || !sheetGoalId) return;
+  const id = sheetGoalId;
+  const goal = state.goals.find((g) => g.id === id);
+  goalSheet.close();
+  if (!goal || !commit(moveGoal(state, id, -1))) return;
+  el('home-status').textContent = `Moved "${goal.name}" up.`;
+  focusGoal(id);
+});
+
+el('goal-remove').addEventListener('click', () => {
+  if (!state || !sheetGoalId) return;
+  const id = sheetGoalId;
+  const index = state.goals.findIndex((g) => g.id === id);
+  const goal = state.goals[index];
+  const below = state.goals[index + 1];
+  const where = below ? `and goes to "${below.name}" next` : 'for future goals';
+  if (!window.confirm(`Remove "${goal.name}"? The money saved for it stays in Goals ${where}.`)) return;
+  goalSheet.close();
+  if (!commit(removeGoal(state, id))) return;
+  el('home-status').textContent = `Removed "${goal.name}". Its money stays in Goals.`;
+});
+
+/** @param {string} id */
+function openBuySheet(id) {
+  const goal = state?.goals.find((g) => g.id === id);
+  if (!goal) return;
+  sheetGoalId = id;
+  clearErrors(buySheet);
+  el('home-status').textContent = '';
+  el('buy-title').textContent = `Did you buy ${goal.name}?`;
+  buyPrice.value = centsToInput(goal.targetCents);
+  openSheet(buySheet);
+  buyPrice.focus();
+}
+
+el('buy-cancel').addEventListener('click', () => buySheet.close());
+
+el('buy-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!state || !sheetGoalId) return;
+  clearErrors(buySheet);
+  const price = readAmount(buyPrice.value);
+  if (!price.ok) {
+    showError('buy-price-error', price.error, buyPrice);
+    return;
+  }
+  let next;
+  try {
+    next = buyGoal(state, sheetGoalId, { cents: price.cents, date: localISODate() });
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    showError('buy-price-error', error.message, buyPrice);
+    return;
+  }
+  const record = next.goalPurchases?.[next.goalPurchases.length - 1];
+  buySheet.close();
+  if (!record || !commit(next)) return;
+  el('home-status').textContent = buySentence(record.cents, record.name, price.cents);
+  el('headline').focus();
+});
+
+el('goal-cards').addEventListener('click', (event) => {
+  const button = /** @type {HTMLElement} */ (event.target).closest('button[data-action]');
+  if (!(button instanceof HTMLButtonElement) || !button.dataset.id) return;
+  if (button.dataset.action === 'options') openGoalSheet(button.dataset.id);
+  if (button.dataset.action === 'buy') openBuySheet(button.dataset.id);
+});
+
+// ---------------------------------------------------------------------------
 // Drawing
 
 /**
@@ -314,7 +461,14 @@ function goalCard(goal, top) {
   const name = document.createElement('h3');
   name.className = 'goal-name';
   name.textContent = goal.name;
-  head.append(name);
+  const options = document.createElement('button');
+  options.type = 'button';
+  options.className = 'icon-button';
+  options.textContent = '⋯';
+  options.dataset.action = 'options';
+  options.dataset.id = goal.id;
+  options.setAttribute('aria-label', `Options for ${goal.name}`);
+  head.append(name, options);
 
   const amounts = document.createElement('p');
   amounts.className = 'goal-amounts';
@@ -330,6 +484,16 @@ function goalCard(goal, top) {
   ready.textContent = goal.line;
 
   li.append(head, amounts, bar, ready);
+  if (goal.funded) {
+    const buy = document.createElement('button');
+    buy.type = 'button';
+    buy.className = 'primary buy';
+    buy.textContent = 'Buy it';
+    buy.dataset.action = 'buy';
+    buy.dataset.id = goal.id;
+    buy.setAttribute('aria-label', `Buy it: ${goal.name}`);
+    li.append(buy);
+  }
   return li;
 }
 
@@ -346,6 +510,7 @@ function render() {
   el('basis').textContent = plan.basis;
   el('basis').hidden = plan.basis === '';
   el('goal-cards').replaceChildren(...plan.goals.map((goal, i) => goalCard(goal, i === 0)));
+  el('goals-empty').hidden = plan.goals.length > 0;
 }
 
 render();

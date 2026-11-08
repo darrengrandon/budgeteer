@@ -32,7 +32,7 @@ function contrast(a, b) {
 const TEXT_PAIRS = [
   ['text', 'bg'], ['text', 'card'], ['text', 'input-bg'], ['muted', 'bg'], ['muted', 'card'],
   ['accent-text', 'accent'], ['accent', 'card'], ['accent', 'bg'], ['error', 'error-bg'],
-  ['ok', 'ok-bg'], ['ok', 'card'], ['notice-text', 'notice-bg'],
+  ['ok', 'ok-bg'], ['ok', 'card'], ['notice-text', 'notice-bg'], ['error', 'card'],
 ];
 const UI_PAIRS = [
   ['input-border', 'card'], ['input-border', 'input-bg'], ['focus', 'card'], ['focus', 'bg'],

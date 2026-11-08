@@ -2,7 +2,7 @@
 id: 016
 title: Goals on the phone, including Buy it
 depends_on: [015]
-status: todo
+status: done
 ---
 
 ## Goal

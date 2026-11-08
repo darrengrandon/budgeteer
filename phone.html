@@ -52,12 +52,14 @@
     <main id="home" hidden>
       <button type="button" id="nudge" class="nudge" hidden>Got paid? Log it.</button>
       <section class="headline-card" aria-label="What to spend">
-        <p id="headline" class="headline"></p>
+        <p id="headline" class="headline" tabindex="-1"></p>
         <p id="basis" class="muted basis"></p>
         <p id="home-status" class="result" role="status"></p>
       </section>
       <section aria-label="Your goals">
         <ol id="goal-cards" class="goal-cards"></ol>
+        <p id="goals-empty" class="muted empty-goals">Saving for something? Add a goal and Budgeteer will tell you when you can buy it.</p>
+        <button type="button" id="add-goal" class="secondary wide">+ Add a goal</button>
       </section>
     </main>
   </div>
@@ -99,6 +101,58 @@
       <div class="row-center">
         <button type="button" id="pay-undo" class="link">Undo</button>
       </div>
+    </div>
+  </dialog>
+  <!-- Add or edit a goal. -->
+  <dialog id="goal-sheet" class="sheet" aria-labelledby="goal-title">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="goal-title">Add a goal</h2>
+    <form id="goal-form" novalidate>
+      <div class="field">
+        <label for="goal-name">Goal name</label>
+        <input id="goal-name" type="text" maxlength="40" autocomplete="off" enterkeyhint="next"
+               aria-describedby="goal-name-error">
+        <p id="goal-name-error" class="error" role="alert"></p>
+      </div>
+      <div class="field">
+        <label for="goal-price">Price</label>
+        <div class="money-input">
+          <span aria-hidden="true">$</span>
+          <input id="goal-price" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done"
+                 aria-describedby="goal-price-error">
+        </div>
+        <p id="goal-price-error" class="error" role="alert"></p>
+      </div>
+      <button type="submit" class="primary big">Save goal</button>
+    </form>
+    <div id="goal-more" class="goal-more">
+      <button type="button" id="goal-up" class="secondary wide">Move up</button>
+      <button type="button" id="goal-remove" class="danger wide">Remove this goal</button>
+    </div>
+    <div class="row-center">
+      <button type="button" id="goal-cancel" class="link">Cancel</button>
+    </div>
+  </dialog>
+
+  <!-- Buy it: only for a fully saved goal. -->
+  <dialog id="buy-sheet" class="sheet" aria-labelledby="buy-title">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="buy-title">Did you buy it?</h2>
+    <form id="buy-form" novalidate>
+      <div class="field">
+        <label for="buy-price">What did it cost?</label>
+        <div class="money-input big-amount">
+          <span aria-hidden="true">$</span>
+          <input id="buy-price" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done"
+                 aria-describedby="buy-price-help buy-price-error">
+        </div>
+        <small id="buy-price-help" class="muted">If it cost less, the rest stays in Goals for your next goal.</small>
+        <p id="buy-price-error" class="error" role="alert"></p>
+      </div>
+      <button type="submit" class="primary big">Yes, I bought it</button>
+    </form>
+    <div class="row-center">
+      <button type="button" id="buy-cancel" class="link">Cancel</button>
     </div>
   </dialog>
 </body>

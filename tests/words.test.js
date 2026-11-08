@@ -199,3 +199,8 @@ test('payBasis says what the headline is based on', () => {
   assert.equal(payBasis(10000), 'Out of about $100 a week of pay.');
   assert.equal(payBasis(850), 'Out of about $8.50 a week of pay.');
 });
+
+test('buySentence explains when it cost more than the goal', () => {
+  assert.equal(buySentence(3000, 'Tickets', 4500), "Nice! $30.00 came out of Goals for Tickets. The extra $15.00 didn't come from Goals.");
+  assert.equal(buySentence(2500, 'Tickets', 2500), 'Nice! $25.00 came out of Goals for Tickets.');
+});

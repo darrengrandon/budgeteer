@@ -260,10 +260,12 @@ export function goalTimeline({ name, ...rest }) {
 
 /**
  * "Nice! $85.00 came out of Goals for Concert tickets."
- * @param {number} cents
+ * @param {number} cents what came out of Goals
  * @param {string} name
+ * @param {number} [paidCents] what it really cost, if more than came out of Goals
  * @returns {string}
  */
-export function buySentence(cents, name) {
-  return `Nice! ${formatCents(cents)} came out of Goals for ${name}.`;
+export function buySentence(cents, name, paidCents = cents) {
+  const extra = paidCents > cents ? ` The extra ${formatCents(paidCents - cents)} didn't come from Goals.` : '';
+  return `Nice! ${formatCents(cents)} came out of Goals for ${name}.${extra}`;
 }
