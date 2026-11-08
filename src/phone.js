@@ -15,6 +15,8 @@ import {
   updateGoal,
   removeGoal,
   moveGoal,
+  addPurchase,
+  setTrackSpending,
   removePaycheck,
   removePurchase,
   removeGoalPurchase,
@@ -33,7 +35,17 @@ import { buyGoal } from './goals.js';
 import { centsToInput, formatCents } from './money.js';
 import { localISODate } from './budget.js';
 import { homePlan } from './plan.js';
-import { paycheckSentence, goalTimeline, buySentence, splitTotalHint, shortDate } from './words.js';
+import {
+  paycheckSentence,
+  goalTimeline,
+  buySentence,
+  splitTotalHint,
+  shortDate,
+  leftToSpend,
+  purchaseSentence,
+  overspendMessage,
+  spendAvailable,
+} from './words.js';
 import { readAmount, readSplitInputs, toPercent } from './forms.js';
 
 /** @typedef {import('./storage.js').State} State */
@@ -677,9 +689,98 @@ el('history').addEventListener('click', (event) => {
 });
 
 function renderSettings() {
+  if (!state) return;
+  const tracking = state.settings?.trackSpending === true;
+  el('track-switch').setAttribute('aria-checked', String(tracking));
+  el('money-note').hidden = tracking;
   renderSplitPreview();
   renderMoney();
   renderHistory();
+}
+
+// Track my spending (docs/adr/0005): off hides purchases; it never deletes them.
+
+el('track-switch').addEventListener('click', () => {
+  if (!state) return;
+  clearSettingsMessages();
+  const on = state.settings?.trackSpending !== true;
+  if (!commit(setTrackSpending(state, on))) return;
+  el('track-result').textContent = on
+    ? 'Tracking is on. Log purchases from the Spending card on Home.'
+    : 'Tracking is off. Your purchases are kept, just hidden.';
+});
+
+const purchaseSheet = dialogEl('purchase-sheet');
+const purchaseAmount = inputEl('purchase-amount');
+const purchaseNote = inputEl('purchase-note');
+
+for (const input of [purchaseAmount, purchaseNote]) input.addEventListener('input', () => clearErrors(purchaseSheet));
+
+el('log-purchase').addEventListener('click', () => {
+  if (!state) return;
+  clearErrors(purchaseSheet);
+  el('home-status').textContent = '';
+  purchaseAmount.value = '';
+  purchaseNote.value = '';
+  el('purchase-left').textContent = spendAvailable(balances(state).spend, state.paychecks.length > 0);
+  openSheet(purchaseSheet);
+  purchaseAmount.focus();
+});
+
+el('purchase-cancel').addEventListener('click', () => purchaseSheet.close());
+
+el('purchase-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!state) return;
+  clearErrors(purchaseSheet);
+  const amount = readAmount(purchaseAmount.value);
+  if (!amount.ok) {
+    showError('purchase-amount-error', amount.error, purchaseAmount);
+    return;
+  }
+  let next;
+  try {
+    next = addPurchase(state, { date: localISODate(), cents: amount.cents, note: purchaseNote.value });
+  } catch (error) {
+    if (error instanceof OverspendError) {
+      showError('purchase-amount-error', overspendMessage(error.availableCents), purchaseAmount);
+    } else if (error instanceof RangeError) {
+      showError('purchase-note-error', error.message, purchaseNote);
+    } else {
+      throw error;
+    }
+    return;
+  }
+  purchaseSheet.close();
+  if (!commit(next)) return;
+  el('home-status').textContent = purchaseSentence(amount.cents, balances(next).spend);
+});
+
+/** The Spending card on Home: what's left and the latest three records. */
+function renderSpending() {
+  if (!state) return;
+  const tracking = state.settings?.trackSpending === true;
+  el('spending').hidden = !tracking;
+  if (!tracking) return;
+  el('left-to-spend').textContent = leftToSpend(balances(state).spend);
+  el('recent').replaceChildren(...recentActivity(state, 3).items.map((item) => {
+    const words = historyWords(item);
+    const li = document.createElement('li');
+    const text = document.createElement('span');
+    text.className = 'history-text';
+    const what = document.createElement('span');
+    what.className = 'history-what';
+    what.textContent = words.what;
+    const when = document.createElement('span');
+    when.className = 'history-when';
+    when.textContent = shortDate(item.date);
+    text.append(what, when);
+    const amount = document.createElement('span');
+    amount.className = item.kind === 'paycheck' ? 'history-amount in' : 'history-amount';
+    amount.textContent = words.amount;
+    li.append(text, amount);
+    return li;
+  }));
 }
 
 // Backup: download the records as a file, or restore them from one. A restored file is
@@ -808,6 +909,7 @@ function render() {
   el('basis').hidden = plan.basis === '';
   el('goal-cards').replaceChildren(...plan.goals.map((goal, i) => goalCard(goal, i === 0)));
   el('goals-empty').hidden = plan.goals.length > 0;
+  renderSpending();
 }
 
 render();

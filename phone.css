@@ -689,3 +689,76 @@ dialog.sheet.full {
 #history-toggle {
   margin-top: 0.5rem;
 }
+
+/* Track my spending */
+
+.card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.spending h2 {
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+
+.left {
+  margin: 0 0 0.75rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.recent {
+  margin-top: 0.5rem;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.switch-row p {
+  margin: 0;
+}
+
+.switch {
+  flex: none;
+  position: relative;
+  width: 64px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--input-border);
+  padding: 0;
+}
+
+.switch .knob {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--card);
+  transition: transform 0.15s ease;
+}
+
+.switch[aria-checked="true"] {
+  background: var(--accent);
+}
+
+.switch[aria-checked="true"] .knob {
+  transform: translateX(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch .knob {
+    transition: none;
+  }
+}

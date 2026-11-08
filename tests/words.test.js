@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine, whatIfWeekly, spendAvailable,
-  spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence, payBasis,
+  spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence, payBasis, leftToSpend,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -203,4 +203,11 @@ test('payBasis says what the headline is based on', () => {
 test('buySentence explains when it cost more than the goal', () => {
   assert.equal(buySentence(3000, 'Tickets', 4500), "Nice! $30.00 came out of Goals for Tickets. The extra $15.00 didn't come from Goals.");
   assert.equal(buySentence(2500, 'Tickets', 2500), 'Nice! $25.00 came out of Goals for Tickets.');
+});
+
+// Ticket 018: the Spending card
+
+test('leftToSpend is the big number on the Spending card', () => {
+  assert.equal(leftToSpend(6000), '$60.00 left to spend');
+  assert.equal(leftToSpend(0), '$0.00 left to spend');
 });

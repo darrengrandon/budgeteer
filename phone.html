@@ -69,6 +69,13 @@
         <p id="goals-empty" class="muted empty-goals">Saving for something? Add a goal and Budgeteer will tell you when you can buy it.</p>
         <button type="button" id="add-goal" class="secondary wide">+ Add a goal</button>
       </section>
+      <!-- Only while "Track my spending" is on. -->
+      <section id="spending" class="card spending" aria-labelledby="spending-title" hidden>
+        <h2 id="spending-title">Your spending</h2>
+        <p id="left-to-spend" class="left"></p>
+        <button type="button" id="log-purchase" class="secondary wide">Log a purchase</button>
+        <ul id="recent" class="history recent" aria-label="Latest"></ul>
+      </section>
     </main>
   </div>
 
@@ -156,6 +163,19 @@
     <section class="settings-section" aria-labelledby="money-title">
       <h3 id="money-title">Your money</h3>
       <ul id="money" class="money-list"></ul>
+      <p id="money-note" class="muted" hidden>Spend isn't tracked, so this is everything that went into it. Turn on Track my spending to see what's left.</p>
+    </section>
+
+    <section class="settings-section" aria-labelledby="track-label">
+      <div class="switch-row">
+        <div>
+          <h3 id="track-label">Track my spending</h3>
+          <p id="track-help" class="muted">Log what you buy and see what's left to spend.</p>
+        </div>
+        <button type="button" id="track-switch" class="switch" role="switch" aria-checked="false"
+                aria-labelledby="track-label" aria-describedby="track-help"><span class="knob" aria-hidden="true"></span></button>
+      </div>
+      <p id="track-result" class="result" role="status"></p>
     </section>
 
     <section class="settings-section" aria-labelledby="history-title">
@@ -185,6 +205,34 @@
       <p>On Android: tap the ⋮ menu in Chrome, then "Add to Home screen" or "Install app".</p>
       <p class="muted">Then Budgeteer opens like an app and works without internet.</p>
     </section>
+  </dialog>
+
+  <!-- Log a purchase (only while tracking is on). -->
+  <dialog id="purchase-sheet" class="sheet" aria-labelledby="purchase-title">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="purchase-title">What did you buy?</h2>
+    <p id="purchase-left" class="muted"></p>
+    <form id="purchase-form" novalidate>
+      <div class="field">
+        <label for="purchase-amount">Amount spent</label>
+        <div class="money-input big-amount">
+          <span aria-hidden="true">$</span>
+          <input id="purchase-amount" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next"
+                 aria-describedby="purchase-left purchase-amount-error">
+        </div>
+        <p id="purchase-amount-error" class="error" role="alert"></p>
+      </div>
+      <div class="field">
+        <label for="purchase-note">What was it for? (optional)</label>
+        <input id="purchase-note" type="text" maxlength="80" autocomplete="off" enterkeyhint="done"
+               aria-describedby="purchase-note-error">
+        <p id="purchase-note-error" class="error" role="alert"></p>
+      </div>
+      <button type="submit" class="primary big">Log purchase</button>
+    </form>
+    <div class="row-center">
+      <button type="button" id="purchase-cancel" class="link">Cancel</button>
+    </div>
   </dialog>
 
   <!-- Add or edit a goal. -->

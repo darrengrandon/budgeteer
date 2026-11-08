@@ -259,6 +259,15 @@ export function goalTimeline({ name, ...rest }) {
 }
 
 /**
+ * The big number on the Spending card (only while tracking is on).
+ * @param {number} spendCents
+ * @returns {string}
+ */
+export function leftToSpend(spendCents) {
+  return `${formatCents(spendCents)} left to spend`;
+}
+
+/**
  * "Nice! $85.00 came out of Goals for Concert tickets."
  * @param {number} cents what came out of Goals
  * @param {string} name

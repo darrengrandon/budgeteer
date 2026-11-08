@@ -2,7 +2,7 @@
 id: 018
 title: Track my spending switch
 depends_on: [017]
-status: todo
+status: done
 ---
 
 ## Goal
