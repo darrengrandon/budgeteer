@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, spendAvailable,
   spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence, payBasis, leftToSpend,
+  lastPaycheckNote, bigAmountWarning, missedChip,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -129,4 +130,45 @@ test('buySentence explains when it cost more than the goal', () => {
 test('leftToSpend is the big number on the Spending card', () => {
   assert.equal(leftToSpend(6000), '$60.00 left to spend');
   assert.equal(leftToSpend(0), '$0.00 left to spend');
+});
+
+// Second review (REVIEW.md L1, L2, L5, L10, L14)
+
+test('L10: readyLine counts from the last payday, so the date stays put between paydays', () => {
+  const base = { savedCents: 6249, targetCents: 25000, hasPay: true, goalsPercent: 20, weeks: 7, fromISO: '2026-11-07' };
+  assert.equal(readyLine({ ...base, todayISO: '2026-11-07' }), 'Ready in about 7 weeks (around Dec 26)');
+  assert.equal(readyLine({ ...base, todayISO: '2026-11-20' }), 'Ready in about 6 weeks (around Dec 26)');
+  assert.equal(readyLine({ ...base, todayISO: '2026-11-23' }), 'Ready in about 5 weeks (around Dec 26)');
+});
+
+test('L10: when the date has passed without enough money, it asks for the paycheck', () => {
+  const line = readyLine({ savedCents: 6249, targetCents: 9000, hasPay: true, goalsPercent: 20, weeks: 1, fromISO: '2026-11-07', todayISO: '2026-12-05' });
+  assert.equal(line, 'Should be ready by now. Log your paycheck to check.');
+});
+
+test('L14: long waits are said in years', () => {
+  const base = { savedCents: 0, targetCents: 500000, hasPay: true, goalsPercent: 20, todayISO: '2026-11-07' };
+  assert.equal(readyLine({ ...base, weeks: 52 }), 'Ready in about 52 weeks (around Nov 6, 2027)');
+  assert.equal(readyLine({ ...base, weeks: 60 }), 'Ready in about a year (around Jan 1, 2028)');
+  assert.equal(readyLine({ ...base, weeks: 159 }), 'Ready in about 3 years (around Nov 24, 2029)');
+  assert.match(readyLine({ ...base, weeks: 32322 }), /^Ready in about 622 years \(around /);
+});
+
+test('L1: lastPaycheckNote reminds the teen of a paycheck logged in the last 3 days', () => {
+  assert.equal(lastPaycheckNote('2026-11-07', 31247, '2026-11-07'), 'You already logged $312.47 today.');
+  assert.equal(lastPaycheckNote('2026-11-07', 31247, '2026-11-08'), 'You already logged $312.47 yesterday.');
+  assert.equal(lastPaycheckNote('2026-11-05', 31247, '2026-11-08'), 'You already logged $312.47 on Nov 5.');
+  assert.equal(lastPaycheckNote('2026-11-04', 31247, '2026-11-08'), '');
+});
+
+test('L5: bigAmountWarning asks about an amount 4 times the last paycheck or more', () => {
+  assert.equal(bigAmountWarning(3124700, 31247), "That's a lot more than last time ($312.47). Is $31,247.00 right?");
+  assert.equal(bigAmountWarning(124988, 31247), "That's a lot more than last time ($312.47). Is $1,249.88 right?");
+  assert.equal(bigAmountWarning(124987, 31247), '');
+  assert.equal(bigAmountWarning(3124700, null), '');
+});
+
+test('L2: missedChip offers to add the skipped paydays', () => {
+  assert.equal(missedChip(['2026-11-21'], '2026-12-05'), 'Also add the paycheck I missed (around Nov 21)');
+  assert.equal(missedChip(['2026-11-21', '2026-12-05'], '2026-12-19'), 'Also add the 2 paychecks I missed (around Nov 21 and Dec 5)');
 });

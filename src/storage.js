@@ -570,6 +570,18 @@ export function removeGoal(state, id) {
 }
 
 /**
+ * Move a goal to the top, so it gets Goals money first (REVIEW.md L6). The others keep their order.
+ * @param {State} state
+ * @param {string} id
+ * @returns {State}
+ */
+export function moveGoalToTop(state, id) {
+  const index = goalIndex(state, id);
+  if (index === 0) return state;
+  return { ...state, goals: [state.goals[index], ...state.goals.filter((g) => g.id !== id)] };
+}
+
+/**
  * Move a goal one place up (-1) or down (+1). Past either end, nothing changes.
  * @param {State} state
  * @param {string} id

@@ -6,7 +6,7 @@ add it here.
 | Word | Meaning | In code |
 |---|---|---|
 | **Paycheck** | Take-home pay the teen logs: an amount in cents and a date (today when logged in the app). Keeps the split it was logged with. | `state.paychecks`, `addPaycheck` |
-| **Payday** | A date with one or more paychecks. Two paychecks on the same day are one payday. | `paydays()` in `src/pay.js` |
+| **Payday** | One or more paychecks less than 4 days apart, dated by the first. A duplicate or a second job a few days apart is one payday. | `paydays()` in `src/pay.js` |
 | **Usual gap** | The median number of days between the last 6 paydays; 14 when there is only one payday. | `usualGapDays()` |
 | **Weekly pay** | Average payday amount × 7 ÷ usual gap. Kept as an exact fraction `{ cents, days }` (cents earned per that many days) so nothing is rounded early. | `weeklyPay()` |
 | **Split** | Three whole percents for Spend, Save and Goals that total 100. Starts at 50/30/20. | `state.split` |
@@ -24,3 +24,5 @@ add it here.
 | **Sheet** | A panel that slides up from the bottom (paycheck, buy it, purchase, goal). Built on `<dialog>`. | `.sheet` |
 | **History** | Every paycheck, purchase and goal purchase, newest first, in Settings. The place to fix mistakes. | `recentActivity()` |
 | **Version 1 / version 2** | The saved-data format. Version 1 is upgraded to version 2 on load and restore. | `upgradeState()` |
+| **Missed payday** | An expected payday (last payday + usual gap, repeated) at least half a gap in the past with nothing logged. The paycheck sheet offers to add it. | `missedPaydays()` |
+| **Backup nudge** | The "Back up your info" card after every 4 paychecks since the last backup or "Not now" on this phone. | `backupDue()` |

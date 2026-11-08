@@ -1,10 +1,14 @@
 // Weekly pay, learned from the gaps between paydays (SPEC.md "The numbers", docs/adr/0004).
 // Pure functions. All money is integer cents; weekly pay is kept as an exact fraction.
 
-import { dayNumber } from './budget.js';
+import { dayNumber, addDays } from './budget.js';
 
 /** How many recent paydays count. */
 const RECENT_PAYDAYS = 6;
+/** Paychecks fewer than this many days apart are one payday. */
+const SAME_PAYDAY_DAYS = 4;
+/** Never offer to add more missed paychecks than this at once. */
+const MAX_MISSED = 6;
 /** The usual gap when there is only one payday: paid every 2 weeks. */
 const DEFAULT_GAP_DAYS = 14;
 /** "Got paid? Log it." waits this many days past the usual gap. */
@@ -16,21 +20,47 @@ const GRACE_DAYS = 2;
  */
 
 /**
- * Paychecks grouped by date (two on one day are one payday), oldest first.
- * Paychecks dated after today are left out.
+ * Paychecks grouped into paydays, oldest first. A paycheck less than 4 days after the
+ * first paycheck of a payday joins it: a duplicate, or a second job paying a few days
+ * apart, never fakes a 1-day gap (REVIEW.md L1). Paychecks dated after today are left out.
  * @param {PaycheckLike[]} paychecks
  * @param {string} todayISO
  * @returns {{ date: string, cents: number }[]}
  */
 export function paydays(paychecks, todayISO) {
   const today = dayNumber(todayISO);
-  /** @type {Map<string, number>} */
-  const byDate = new Map();
-  for (const { date, cents } of paychecks) {
-    if (dayNumber(date) > today) continue;
-    byDate.set(date, (byDate.get(date) ?? 0) + cents);
+  const sorted = paychecks
+    .filter(({ date }) => dayNumber(date) <= today)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  /** @type {{ date: string, cents: number }[]} */
+  const groups = [];
+  for (const { date, cents } of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && dayNumber(date) - dayNumber(last.date) < SAME_PAYDAY_DAYS) last.cents += cents;
+    else groups.push({ date, cents });
   }
-  return [...byDate].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([date, cents]) => ({ date, cents }));
+  return groups;
+}
+
+/**
+ * Paydays the teen most likely skipped: the expected paydays after the last one (every
+ * usual gap) that are at least half a gap in the past (REVIEW.md L2).
+ * @param {PaycheckLike[]} paychecks
+ * @param {string} todayISO
+ * @returns {string[]} 'YYYY-MM-DD' dates, oldest first
+ */
+export function missedPaydays(paychecks, todayISO) {
+  const all = paydays(paychecks, todayISO);
+  if (all.length === 0) return [];
+  const gap = usualGapDays(paychecks, todayISO);
+  const last = dayNumber(all[all.length - 1].date);
+  const latest = dayNumber(todayISO) - Math.ceil(gap / 2);
+  /** @type {string[]} */
+  const missed = [];
+  for (let i = 1; last + i * gap <= latest && missed.length < MAX_MISSED; i++) {
+    missed.push(addDays(all[all.length - 1].date, i * gap));
+  }
+  return missed;
 }
 
 /**

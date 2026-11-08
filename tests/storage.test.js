@@ -32,6 +32,7 @@ import {
   removeGoalPurchase,
   GoalMoneyUsedError,
   nextId,
+  moveGoalToTop,
 } from '../src/storage.js';
 
 /** A fake localStorage that keeps items in a Map. */
@@ -737,4 +738,15 @@ test('recentActivity includes goal buys, with their goal name', () => {
   assert.equal(total, 2);
   assert.deepEqual(items[0], { kind: 'goalPurchase', id: 'x1', date: '2026-11-07', cents: 3000, name: 'Tickets' });
   assert.equal(items[1].kind, 'paycheck');
+});
+
+// Second review (REVIEW.md L6)
+
+test('moveGoalToTop puts a goal first and keeps the others in order', () => {
+  let state = emptyState();
+  for (const name of ['A', 'B', 'C']) state = addGoal(state, { name, targetCents: 100 });
+  const id = state.goals[2].id;
+  assert.deepEqual(moveGoalToTop(state, id).goals.map((g) => g.name), ['C', 'A', 'B']);
+  assert.deepEqual(moveGoalToTop(state, state.goals[0].id).goals.map((g) => g.name), ['A', 'B', 'C']);
+  assert.throws(() => moveGoalToTop(state, 'g99'), RangeError);
 });

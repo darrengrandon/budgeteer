@@ -1,7 +1,7 @@
 // What Home shows, worked out without a browser (ticket 015).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { homePlan } from '../src/plan.js';
+import { homePlan, backupDue } from '../src/plan.js';
 import { newState, addPaycheck, addGoal, setSplit } from '../src/storage.js';
 
 const TODAY = '2026-11-07';
@@ -48,4 +48,30 @@ test('the "Got paid?" nudge shows after the usual gap plus 2 days', () => {
   const state = addPaycheck(newState(), { date: '2026-10-22', cents: 20000 });
   assert.equal(homePlan(state, '2026-11-07').nudge, false);
   assert.equal(homePlan(state, '2026-11-08').nudge, true);
+});
+
+// Second review (REVIEW.md L4, L6, L10)
+
+test('L10: Home counts the goal date from the last payday, so it does not slide', () => {
+  let state = addPaycheck(newState(), { date: '2026-11-07', cents: 31247 });
+  state = addGoal(state, { name: 'AirPods', targetCents: 25000 });
+  assert.equal(homePlan(state, '2026-11-07').goals[0].line, 'Ready in about 7 weeks (around Dec 26)');
+  assert.equal(homePlan(state, '2026-11-20').goals[0].line, 'Ready in about 6 weeks (around Dec 26)');
+});
+
+test('L6: a goal the Goals money could buy now, if it were first, says so', () => {
+  let state = addPaycheck(newState(), { date: TODAY, cents: 31247 }); // $62.49 in Goals
+  state = addGoal(state, { name: 'Car', targetCents: 500000 });
+  state = addGoal(state, { name: 'Phone case', targetCents: 2000 });
+  const [car, phoneCase] = homePlan(state, TODAY).goals;
+  assert.match(car.line, /^Ready in about /);
+  assert.equal(phoneCase.line, "The money's already in Goals. Move it to the top to buy it now.");
+  assert.equal(phoneCase.canMoveToBuy, true);
+});
+
+test('L4: a backup is due after 4 paychecks since the last one on this phone', () => {
+  assert.equal(backupDue(3, null), false);
+  assert.equal(backupDue(4, null), true);
+  assert.equal(backupDue(7, 4), false);
+  assert.equal(backupDue(8, 4), true);
 });

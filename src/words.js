@@ -2,7 +2,7 @@
 // Pure functions, so the wording is tested without a browser.
 
 import { formatCents } from './money.js';
-import { addDays } from './budget.js';
+import { addDays, dayNumber } from './budget.js';
 
 /**
  * "Your $42.50 became $21.25 to spend, $12.75 saved, $8.50 for goals."
@@ -143,18 +143,74 @@ export function shortDateFrom(iso, todayISO) {
 }
 
 /**
- * The line on a goal card.
+ * The line on a goal card. The date is counted from fromISO (the last payday), so it stays
+ * put between paydays (REVIEW.md L10); the weeks shown are from today.
  * @param {{ savedCents: number, targetCents: number, weeks: number, hasPay: boolean,
- *   goalsPercent: number, todayISO: string }} args
+ *   goalsPercent: number, todayISO: string, fromISO?: string }} args
  * @returns {string}
  */
-export function readyLine({ savedCents, targetCents, weeks, hasPay, goalsPercent, todayISO }) {
+export function readyLine({ savedCents, targetCents, weeks, hasPay, goalsPercent, todayISO, fromISO = todayISO }) {
   if (savedCents >= targetCents) return 'You can buy it!';
   if (!hasPay) return 'Log a paycheck to see when.';
   if (goalsPercent === 0) return 'Your split puts nothing into Goals. Change it in Settings.';
   if (!Number.isFinite(weeks)) return 'Ready once more pay comes in.';
-  const when = shortDateFrom(addDays(todayISO, weeks * 7), todayISO);
-  return `Ready in about ${weeks === 1 ? '1 week' : `${weeks} weeks`} (around ${when})`;
+  const date = addDays(fromISO, weeks * 7);
+  const daysLeft = dayNumber(date) - dayNumber(todayISO);
+  if (daysLeft <= 0) return 'Should be ready by now. Log your paycheck to check.';
+  return `Ready in about ${howLong(Math.ceil(daysLeft / 7))} (around ${shortDateFrom(date, todayISO)})`;
+}
+
+/**
+ * Weeks up to a year; after that, years, which are easier to picture (REVIEW.md L14).
+ * @param {number} weeks
+ * @returns {string}
+ */
+function howLong(weeks) {
+  if (weeks === 1) return '1 week';
+  if (weeks <= 52) return `${weeks} weeks`;
+  if (weeks < 78) return 'a year';
+  return `${withCommas(Math.round(weeks / 52))} years`;
+}
+
+/**
+ * A reminder in the paycheck sheet when a paycheck was logged in the last 3 days, so a
+ * duplicate is less likely (REVIEW.md L1). Empty otherwise.
+ * @param {string} lastISO the last paycheck's date
+ * @param {number} cents the last paycheck
+ * @param {string} todayISO
+ * @returns {string}
+ */
+export function lastPaycheckNote(lastISO, cents, todayISO) {
+  const days = dayNumber(todayISO) - dayNumber(lastISO);
+  if (days < 0 || days > 3) return '';
+  const when = days === 0 ? 'today' : days === 1 ? 'yesterday' : `on ${shortDateFrom(lastISO, todayISO)}`;
+  return `You already logged ${formatCents(cents)} ${when}.`;
+}
+
+/**
+ * A question before saving a paycheck 4 or more times the last one, like a missing dot
+ * (REVIEW.md L5). Empty when the amount looks normal.
+ * @param {number} cents
+ * @param {number | null} lastCents
+ * @returns {string}
+ */
+export function bigAmountWarning(cents, lastCents) {
+  if (lastCents === null || cents < lastCents * 4) return '';
+  return `That's a lot more than last time (${formatCents(lastCents)}). Is ${formatCents(cents)} right?`;
+}
+
+/**
+ * The chip that adds paydays the teen skipped (REVIEW.md L2).
+ * @param {string[]} dates
+ * @param {string} todayISO
+ * @returns {string}
+ */
+export function missedChip(dates, todayISO) {
+  const when = dates.map((d) => shortDateFrom(d, todayISO));
+  const list = when.length <= 2 ? when.join(' and ') : `${when.slice(0, -1).join(', ')} and ${when[when.length - 1]}`;
+  return dates.length === 1
+    ? `Also add the paycheck I missed (around ${list})`
+    : `Also add the ${dates.length} paychecks I missed (around ${list})`;
 }
 
 /**

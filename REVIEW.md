@@ -325,3 +325,124 @@ Every fix below had a failing test first (unit tests in `tests/`, browser tests 
 | U9 / C9 confirm, then refuse | Fixed after the owner agreed to update `e2e/purchase.spec.js`. The removal is checked first, and a refused one shows its message with no dialog. The test now also checks that no dialog appears. | updated e2e "recent activity…" |
 | U6 no way to use goal money | Partly fixed: the Remove dialog now names the goal that gets the money next. A "Bought it" action changes the data and backup format, so at the owner's request it is written up as `tasks/010-goal-bought.md` for approval and not built yet. | e2e "U6" |
 | C11 Python and `@ts-check` | Not fixing. Ticket 008 asks for `python3 -m http.server` by name, and `// @ts-check` only lets an editor check the JSDoc types in plain JS (no build step, no TypeScript). | — |
+
+---
+
+# Second review: the phone app, as a lazy teenager
+Reviewer: a separate agent with no memory of the build, given only SPEC.md and the running app at phone size (Chromium with iPhone 15 and Pixel 9 screens). Date: 2026-11-07.
+
+Unless a finding says otherwise: iPhone 15 screen (393x852), light theme, timezone America/Chicago, "today" = 2026-11-07 10:00, fresh browser context, and "reload" means a reload in the same context.
+
+**Checked and fine.** First run with and without a goal, "Skip for now", "Next" with both boxes empty (acts as skip), "Not paid yet". Amount parsing: "$1,200", "$249.99", "$ 250", ".5" and "50." are accepted. "12,50", "1,20", "1 200", "1e3", "+50", "(50)", "50$", negatives, 0, three decimals and anything over $1,000,000 are all rejected with clear messages. Largest-remainder split: $312.47 became $156.24 / $93.74 / $62.49, as I worked out by hand. I hand-checked weekly pay and "Spend about $X a week" for one payday ($156 pay / $78 spend), every two weeks, weekly with three paydays ($200 / $100), two paychecks on the same day counting as one payday, and a 26-paycheck backup. "Ready in about N weeks (around <date>)" is right, including rounding up, the year on dates in other years, "Log a paycheck to see when." and the 0% Goals message. The "Got paid? Log it." line works: with one payday it is hidden on Nov 23 and shown on Nov 24. For a weekly payer it is hidden at day 9 and shown at day 10, also across the March DST change. It goes away when you log and comes back after Undo. "Same as last time" works, and so does Undo on the paycheck sheet. Buy it at the same price, a lower price and a higher price works, and an amount left over goes to the next goal. History removal asks first. It refuses to remove a paycheck whose money already paid for a purchase or a goal buy, so no bucket can go negative. Backup download (version 2 JSON) works, and restoring asks before it replaces anything. Every bad file I tried was rejected with "nothing was changed": truncated, not JSON, empty, an array, version 3, negative cents, fractional cents, Feb 31, duplicate ids, a future date, purchases bigger than Spend, and goal buys bigger than Goals. A version 1 backup upgrades with tracking on. HTML in names shows as plain text. Corrupt local data gives a friendly message and lets you download the unreadable data. Two tabs stay in sync and don't overwrite each other. Reloading offline and opening a new tab offline both work after one visit, and I saw no request to any other host. Every button is at least 44px. Text contrast is at least 4.5:1 in light and dark. Nothing scrolls sideways at 320px. Sheets scroll in landscape. With the screen cut to 393x420 to stand in for the keyboard, the sheet's main button stays visible. Escape closes sheets and gives focus back, and Enter submits. Paychecks logged near midnight, in Chicago, Los Angeles or Tokyo time, get the right local date. The Add to Home Screen card shows only with the iPhone user agent, and "Got it" sticks after a reload.
+
+### L1. Logging a paycheck again the next day (or twice the same day) wrecks every number, with no warning
+- Kind: bug
+- What I did: Set up a goal "AirPods" for $250, logged a $312.47 paycheck, then tapped Done. Set today to 2026-11-08 and reloaded. Tapped "I got paid", then "Same as last time ($312.47)", then "Add paycheck", then Done. This is a teen who forgot they already logged it, or who has a second job paying a day apart. Variant: the same second paycheck logged at 18:00 on Nov 7 instead.
+- What happened: Next-day version: Home says "Spend about $1,094 a week", "Out of about $2,187 a week of pay." and "AirPods ... Ready in about 1 week (around Nov 15)". Same-day version: "Spend about $156 a week", "Out of about $312 a week of pay." and "Ready in about 3 weeks (around Nov 28)". The sheet never says when the last paycheck was logged. Only the chip shows up, and it invites the duplicate.
+  Hand calculation (next day): paydays are Nov 7 and Nov 8, so the usual gap is 1 day. Weekly pay = (31,247 + 31,247) / 2 x 7 / 1 = 218,729 cents = $2,187.29. Spend = 50% = $1,093.65, which shows as $1,094. That is 14 times the real $78. The app follows the gap rule to the letter, but the rule turns one extra tap into nonsense.
+- What I expected: A warning before saving, such as "You already logged a paycheck today/yesterday ($312.47). Log another one?". Also, the weekly-pay rule should not trust a gap of 1 day. For example, paychecks a few days apart could count as one payday.
+
+### L2. Forgetting one paycheck halves "Spend about" and nearly doubles every goal time (SPEC says it must not fall)
+- Kind: spec mismatch
+- What I did: Set up AirPods for $250 and logged $312.47 on Nov 7. Didn't open the app again until 2026-12-05, so the Nov 21 paycheck was never logged. "Got paid? Log it." was showing. I tapped it, then "Same as last time", then "Add paycheck". Variant: the teen remembers the missed one too and logs $312.47 twice on Dec 5.
+- What happened: "Spend about $39 a week", "Out of about $78 a week of pay." and "AirPods $124.98 of $250, Ready in about 9 weeks (around Feb 6, 2027)". In the variant: "Spend about $59 a week" and "Out of about $117 a week of pay."
+  Hand calculation: paydays are Nov 7 and Dec 5, so the gap is 28 days. Weekly pay = 31,247 x 7 / 28 = 7,811.75 cents = $78. In the variant: (31,247 + 62,494) / 2 x 7 / 28 = 11,717.6 cents = $117. The teen still earns $156 a week. The wrong figure stays until enough later paydays push it out of the median. A paycheck's date is always today, so the teen has no way to log the missed paycheck on its real date.
+- What I expected: SPEC "Weekly pay": "It does not fall when the teen forgets to log". Forgetting to log is exactly what the target user does, and right now the most common way of forgetting halves the advice. The rule could ignore a gap that is about twice the usual gap, or the "Got paid?" flow could ask "You may have missed one. Did you get paid twice?" and let the teen log the missed one on an earlier date.
+
+### L3. Coming back to an already-open app doesn't refresh Home, so "Got paid? Log it." can't show
+- Kind: bug
+- What I did: Set up AirPods for $250, logged $312.47 and tapped Done, then left the page open. I moved the clock to 2026-11-27 (20 days later) without reloading. Then I fired the events a phone sends when you switch back to an open app: `visibilitychange` (hidden, then visible), `focus` and `pageshow` (persisted). After that I opened and cancelled the paycheck sheet.
+- What happened: Home stayed as it was. There was no "Got paid? Log it." line, and the goal still said "Ready in about 7 weeks (around Dec 26)", which was worked out from Nov 7. Only a full reload showed the line.
+- What I expected: The app should re-check the "Got paid?" rule and the dates whenever it comes back on screen, not only on a cold load. On phones, and especially for an iPhone Home Screen app, a page is often resumed from memory instead of reloaded, so the app's only reminder may never show. (I simulated this in Chromium. Please confirm it on a real phone.)
+
+### L4. A teen who opens it in Safari "once in a while" can lose everything, and nothing ever suggests a backup
+- Kind: lazy-teen friction
+- What I did: Looked through every screen for any prompt to back up or to install, iPhone 15 user agent, light and dark.
+- What happened: Backup lives only in Settings → Backup, below the split, Your money, Track my spending and History. With a year of data, "Download backup" is 3.7 screens down inside Settings. Nothing reminds the teen to back up. The Home Screen help card is gone for good after "Got it". It says the app "works without internet" but doesn't say data can be lost if it isn't installed. Safari on iPhone (not the Home Screen app) deletes a site's script-written storage, localStorage included, after 7 days of Safari use without visiting that site. That is exactly the "opens it once in a while" teen. I couldn't test this here (Chromium only).
+- What I expected: The help card, or a one-time note after the first paycheck, should explain that adding to the Home Screen keeps the data safe. There should also be an occasional gentle "Download a backup" nudge, for example after every few paychecks, that can be dismissed.
+
+### L5. Obvious typos are saved without a question (a missing dot gives a 100x paycheck)
+- Kind: lazy-teen friction
+- What I did: Set up a goal "Car" for $5,000 and logged $312.47 on Nov 7. On 2026-11-21: "I got paid", typed `31247` (forgot the dot), "Add paycheck", Done.
+- What happened: "Nice. Your $31,247.00 became $15,623.50 to spend..." and "Car: you can buy it!". Home then says "Spend about $3,945 a week" and offers "Buy it" for the car. Hand calculation: (31,247 + 3,124,700) / 2 x 7 / 14 = 788,986.75 cents, so $7,890 a week of pay and $3,945 to spend. Buy it also takes `8500` for an $85 goal ("The extra $8,415.00 didn't come from Goals."). Undo is on the summary, but the big Done button sits exactly where "Add paycheck" was. A quick double tap on "Add paycheck" saves the paycheck and closes the summary, Undo included. After that the only fix is Settings → History → Remove ("You can't undo this") and logging it again.
+- What I expected: A check like "That's a lot more than last time ($312.47). Is $31,247.00 right?" before saving, when an amount is many times the last paycheck or the goal price.
+
+### L6. A cheap goal added after an expensive one is "ready in 162 weeks" even though the money is already there
+- Kind: lazy-teen friction
+- What I did: On first run, set up a goal "Car" for $5,000 and logged $312.47. Then "+ Add a goal" "Concert tickets" $85, and "+ Add a goal" "Phone case" $20.
+- What happened: "Phone case $0 of $20, Ready in about 162 weeks (around Dec 15, 2029)" and "Concert tickets ... 161 weeks", while $62.49 sits in Goals. Hand calculation: Phone case needs $5,000 + $85 + $20 = $5,105. Missing: $5,042.51 / ($156.235 x 20% = $31.247 a week) = 161.4, so 162 weeks. The math follows SPEC. But to fix it the teen has to find ⋯ → "Move up" (the sheet closes), then ⋯ → "Move up" again. There is no "Move to top", no hint that order matters, and new goals always go to the bottom.
+- What I expected: A one-line hint on a goal that could be bought now if it were first (for example "Move it up to buy it now"), or a "Move to top" action. Even better, ask "Save for this first?" when adding a goal that is cheaper than the money already in Goals.
+
+### L7. "Undo" on a goal buy doesn't bring the goal back, and the next goal suddenly says "You can buy it!"
+- Kind: confusing
+- What I did: Set up a goal "Concert tickets" for $85, logged $500, then "+ Add a goal" "Shoes" $50. Tapped "Buy it", then "Yes, I bought it" ($85). Then Settings → History → "Bought: Concert tickets" → Undo → OK.
+- What happened: The confirm says "The money goes back into Goals." The result is "Undone. $85.00 is back in Goals. Add the goal again if you still want it." Concert tickets is gone, and Shoes now shows "$50 of $50, You can buy it!". Home still shows the old "Nice! $85.00 came out of Goals for Concert tickets." banner.
+- What I expected: SPEC says the buy "can be undone from History". A teen who tapped "Yes, I bought it" by mistake expects Undo to put the goal back where it was, with its money, not to have to type it in again and re-order it.
+
+### L8. With Track my spending off, "Your money" says Spend is "everything that went into it", but it subtracts purchases
+- Kind: bug
+- What I did: "Skip for now", logged $312.47, Done. Settings → Track my spending on → Done. "Log a purchase" $12.40 → "Log purchase". Settings → Track my spending off.
+- What happened: Your money says "Spend $143.84" and "Spend isn't tracked, so this is everything that went into it. Turn on Track my spending to see what's left." But $156.24 went into Spend, and $143.84 is the left-to-spend figure. History still lists the −$12.40 purchase. Home still shows "Logged. $12.40 came out of Spend. You have $143.84 left to spend."
+- What I expected: SPEC "Off: no purchases, no left-to-spend, no balance check anywhere." Show $156.24 to match the sentence, or change the sentence. Also hide the purchase rows and the stale left-to-spend message while tracking is off.
+
+### L9. Buying a goal for more than its price, with tracking on, leaves "left to spend" wrong and doesn't say where the extra came from
+- Kind: confusing
+- What I did: Set up a goal "Concert tickets" for $85, logged $500, turned Track my spending on. "Buy it", typed 120, "Yes, I bought it".
+- What happened: "Nice! $85.00 came out of Goals for Concert tickets. The extra $35.00 didn't come from Goals." The Spending card still says "$250.00 left to spend". Its activity list shows "Bought: Concert tickets −$85.00" right under "left to spend", so the $85 looks like it came out of Spend when it didn't, and the $35 that did come from somewhere is missing.
+- What I expected: With tracking on, offer to take the extra $35 out of Spend, or at least say "Log the extra $35.00 as a purchase". Goal buys in the Spending card should be marked as coming from Goals.
+
+### L10. The goal date slides later every day between paydays and is about a week early
+- Kind: confusing
+- What I did: Set up AirPods for $250 and logged $312.47 on Nov 7. Reloaded on Nov 20 and Nov 23 without logging anything. Nov 21 is the next payday the app itself expects.
+- What happened: Nov 7: "Ready in about 7 weeks (around Dec 26)". Nov 20: "Ready in about 7 weeks (around Jan 8, 2027)". Nov 23: "(around Jan 11, 2027)". Nothing changed except the day I looked, but the goal moved two weeks away. The date is also early. Paid every two weeks, Goals after the Nov 21, Dec 5 and Dec 19 paychecks is 4 x $62.49 = $249.96, still short of $250. The money arrives with the Jan 2 paycheck, a week after "around Dec 26". This follows SPEC's "today plus that many weeks", and that rule is the problem.
+- What I expected: Count from the last payday (or the next expected payday) instead of from today, so the date stays put between paydays. Round up to a payday so "around" is never early.
+
+### L11. Split changes are silently thrown away when you tap Done, and old messages contradict the boxes
+- Kind: lazy-teen friction
+- What I did: Settings → typed 10 / 10 / 80. The preview showed "Spend about $16 a week" and "AirPods: ready in about 2 weeks (around Nov 21)" (hand calculation: 80% of $156.235 is $124.99 a week; $187.51 missing / $124.99 = 1.5, so 2 weeks). Then I tapped "Done" at the top. In a second run: "Save split" with 60/30/10, then typed 70/30/0.
+- What happened: Run 1: nothing was saved and nothing said so. Reopening Settings shows the old split. Run 2: under the boxes showing 70/30/0, it still says "Saved. Paychecks you log from now on will be split 60% Spend, 30% Save, 10% Goals." The preview inside Settings says "AirPods: your split puts nothing into Goals. Change it in Settings." while the teen is already in Settings.
+- What I expected: SPEC says "Nothing changes until Save split", so at least warn on Done ("Save your new split?"). Clear the "Saved" message as soon as a box changes, and drop "Change it in Settings." inside Settings.
+
+### L12. First run drops a typed goal on "Skip for now", and the big "Log your first paycheck" text can't be tapped
+- Kind: lazy-teen friction
+- What I did: First run: typed "AirPods" and "250", then tapped "Skip for now" (thinking it skips the paycheck). Then "Not paid yet", then tapped the big headline "Log your first paycheck" and the goal line "Log a paycheck to see when."
+- What happened: The goal was thrown away without a word. Home says "Saving for something? Add a goal...". Neither headline does anything when tapped. Only the "I got paid" button at the bottom opens the sheet.
+- What I expected: Keep a goal that is fully typed in, or ask "Save AirPods?". Make the "Log your first paycheck" headline and "Log a paycheck to see when." open the paycheck sheet.
+
+### L13. Status messages never go away and go stale
+- Kind: confusing
+- What I did: Any action that shows a green message on Home (add a goal, log a purchase, buy a goal), then waited, and then did the steps in L7 and L8.
+- What happened: The message is still there after 12 seconds and stays until some other action replaces it. It sits between the headline and the goals and pushes the cards down. Messages also outlive what they describe: "Nice! $85.00 came out of Goals for Concert tickets." stays after that buy is undone, and "You have $143.84 left to spend." stays after tracking is turned off.
+- What I expected: Messages fade after a few seconds, or at least clear when the data they describe changes.
+
+### L14. Long goal times are shown as hundreds or thousands of weeks
+- Kind: nit
+- What I did: Set up a goal "Car" for $5,000 with $312.47 every two weeks. Separately, a goal priced at $1,000,000.
+- What happened: "Ready in about 159 weeks (around Nov 24, 2029)" and "Ready in about 32322 weeks (around Apr 25, 2646)". The second has no thousands separator, and nobody can picture 159 weeks.
+- What I expected: Switch to months or years past about a year ("about 3 years, around Nov 2029"), and maybe say gently that the goal is a long way off at this split.
+
+---
+
+## Resolution of the second review (by the builder)
+
+Every fix had a failing test first: unit tests in `tests/pay.test.js`, `words.test.js`,
+`plan.test.js` and `storage.test.js`, and browser tests in `e2e/review2.spec.js` at both phone
+sizes. No existing test was changed. SPEC.md, CONTEXT.md and docs/adr/0004 were updated to
+match.
+
+| Finding | Outcome |
+|---|---|
+| L1 duplicate wrecks the numbers | Fixed in two parts. Paychecks less than 4 days apart now count as one payday, so the next-day duplicate gives $156 a week (2×, a real second paycheck's worth) instead of $1,094; this also makes two jobs paying a few days apart come out right. The sheet now says "You already logged $312.47 yesterday." A blocking "log another one?" step was **not** added: two existing tests log two paychecks on one day on purpose, and changing them needs the owner's OK. |
+| L2 forgetting one paycheck halves the numbers | Fixed. When a payday was clearly skipped, the sheet offers "Also add the paycheck I missed (around Nov 21)"; with it, the example stays at $78 to spend. SPEC's "does not fall" sentence was wrong for this case and is reworded. |
+| L3 an open app doesn't refresh | Fixed in Chromium: coming back on screen (`visibilitychange`, `pageshow`) re-checks the date and storage. Still needs a check on a real iPhone. |
+| L4 Safari can clear data; no backup prompt | Fixed. The iPhone card says Safari may clear the info if Budgeteer isn't opened for a week, and Home shows "Back up your info" after every 4 paychecks since the last backup or "Not now". The 7-day clearing itself can't be tested here. |
+| L5 missing dot saved without a question | Fixed for paychecks 4× the last one or more ("Is $31,247.00 right?" then "Yes, add $31,247.00"), and "Undo paycheck" stays on Home after "Done". **Not done:** a check on the very first paycheck (no last one to compare with; an existing test logs $1,000,000 as a first paycheck) and on Buy it prices (the extra never leaves Goals anyway). |
+| L6 cheap goal under an expensive one | Fixed: "The money's already in Goals. Move it to the top to buy it now." and a "Move to top" action. |
+| L7 Undo of a buy loses the goal | Fixed: "Add it back" returns the goal to the top. Its price is what came out of Goals, because older goal buys don't record the original price and adding a field would change an existing test. |
+| L8 "Your money" Spend with tracking off | Fixed: it now shows everything that went into Spend, as the note says. Purchases stay listed in History (an existing test checks that), where they can still be removed. |
+| L9 buying for more, with tracking on | Fixed: "Take $35.00 from Spend" logs the extra as a purchase, and goal buys show "from Goals" on the Spending card and in History. |
+| L10 date slides and is early | Sliding fixed: the date is counted from the last payday, and a passed date says "Should be ready by now. Log your paycheck to check." **Not done:** rounding to a payday so "around" is never early, because it would change the expected dates in about ten existing tests; waiting for the owner (SPEC.md decision 12). |
+| L11 split thrown away on Done | Fixed: closing Settings with a new split asks "Save your new split (...)?", an old "Saved." clears when a box changes, and the preview says "nothing goes to Goals with this split" instead of "Change it in Settings". |
+| L12 Skip drops a goal; headline not tappable | Fixed: "Skip for now" keeps a fully typed goal, and "Log your first paycheck" opens the paycheck sheet. The goal line "Log a paycheck to see when." is still plain text. |
+| L13 stale messages | Fixed: messages clear when the data changes and fade after 10 seconds. |
+| L14 thousands of weeks | Fixed: "about a year" after 52 weeks, then years ("about 3 years"). |

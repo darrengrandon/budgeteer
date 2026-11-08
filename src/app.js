@@ -15,6 +15,7 @@ import {
   updateGoal,
   removeGoal,
   moveGoal,
+  moveGoalToTop,
   addPurchase,
   setTrackSpending,
   removePaycheck,
@@ -34,7 +35,8 @@ import {
 import { buyGoal } from './goals.js';
 import { centsToInput, formatCents } from './money.js';
 import { localISODate } from './budget.js';
-import { homePlan } from './plan.js';
+import { homePlan, backupDue } from './plan.js';
+import { missedPaydays } from './pay.js';
 import {
   paycheckSentence,
   goalTimeline,
@@ -45,6 +47,10 @@ import {
   purchaseSentence,
   overspendMessage,
   spendAvailable,
+  shortDateFrom,
+  lastPaycheckNote,
+  bigAmountWarning,
+  missedChip,
 } from './words.js';
 import { readAmount, readSplitInputs, toPercent } from './forms.js';
 
@@ -97,6 +103,34 @@ function showNotice(text, offerDownload = false) {
   el('notice').hidden = !text;
 }
 
+/** Home messages fade after this long (REVIEW.md L13). */
+const STATUS_MS = 10_000;
+let statusTimer = 0;
+/** @type {(() => void) | null} */
+let statusRun = null;
+
+/**
+ * The message under the headline, with an optional button (like "Undo paycheck").
+ * It fades after a while, and any saved change clears it (see commit).
+ * @param {string} text
+ * @param {{ label: string, run: () => void } | null} [action]
+ */
+function setStatus(text, action = null) {
+  el('home-status').textContent = text;
+  const button = el('home-status-action');
+  button.hidden = !action;
+  button.textContent = action ? action.label : '';
+  statusRun = action ? action.run : null;
+  clearTimeout(statusTimer);
+  if (text) statusTimer = window.setTimeout(() => setStatus(''), STATUS_MS);
+}
+
+el('home-status-action').addEventListener('click', () => {
+  const run = statusRun;
+  setStatus('');
+  run?.();
+});
+
 /**
  * Hand the teen a file to save.
  * @param {string} fileName
@@ -131,7 +165,9 @@ function openSheet(sheet) {
 
 for (const sheet of document.querySelectorAll('dialog.sheet')) {
   sheet.addEventListener('click', (event) => {
-    if (event.target === sheet) /** @type {HTMLDialogElement} */ (sheet).close();
+    if (event.target !== sheet) return;
+    if (sheet.id === 'settings-sheet') closeSettings();
+    else /** @type {HTMLDialogElement} */ (sheet).close();
   });
 }
 
@@ -183,6 +219,7 @@ function commit(next) {
   state = next;
   if (result.status === 'saved') lastSaved = result.raw;
   else showNotice(NO_STORAGE_WARNING);
+  setStatus('');
   render();
   return true;
 }
@@ -198,6 +235,15 @@ function reloadFromStorage() {
 
 window.addEventListener('storage', (event) => {
   if (event.key === STORAGE_KEY || event.key === null) reloadFromStorage();
+});
+
+// Phones often resume a page from memory instead of reloading it. Re-check the date then,
+// so "Got paid? Log it." and the goal dates are right (REVIEW.md L3).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') reloadFromStorage();
+});
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) reloadFromStorage();
 });
 
 // ---------------------------------------------------------------------------
@@ -244,27 +290,60 @@ el('welcome-form').addEventListener('submit', (event) => {
   startWith(first);
 });
 
-el('welcome-skip').addEventListener('click', () => startWith(newState()));
+el('welcome-skip').addEventListener('click', () => {
+  const name = welcomeName.value.trim();
+  const price = readAmount(welcomePrice.value);
+  if (name !== '' && price.ok) {
+    try {
+      startWith(addGoal(newState(), { name, targetCents: price.cents }));
+      return;
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+    }
+  }
+  startWith(newState());
+});
 
 // ---------------------------------------------------------------------------
 // The paycheck sheet
 
 const paySheet = dialogEl('pay-sheet');
 const payAmount = inputEl('pay-amount');
-/** The id of the paycheck just added, for Undo. */
-let justAddedId = /** @type {string | null} */ (null);
+const paySubmit = el('pay-submit');
+const payMissed = el('pay-missed');
+/** The ids of the paychecks just added (today's, and any missed ones), for Undo. */
+let justAddedIds = /** @type {string[]} */ ([]);
+/** Paydays the teen skipped, offered by the "missed" chip (REVIEW.md L2). */
+let missed = /** @type {string[]} */ ([]);
+/** An unusually big amount the teen has already been asked about (REVIEW.md L5). */
+let confirmedCents = /** @type {number | null} */ (null);
 
-payAmount.addEventListener('input', () => clearErrors(paySheet));
+/** Back to "Add paycheck" after the amount changes. */
+function resetPayQuestion() {
+  confirmedCents = null;
+  paySubmit.textContent = 'Add paycheck';
+}
+
+payAmount.addEventListener('input', () => {
+  clearErrors(paySheet);
+  resetPayQuestion();
+});
+
+/** "A and B", "A, B and C" */
+const joinAnd = (/** @type {string[]} */ items) =>
+  (items.length <= 2 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
 
 /**
  * @param {boolean} [firstTime] the first-run wording: "How much was your paycheck?"
  */
 function openPaySheet(firstTime = false) {
   if (!state) return;
+  const today = localISODate();
   clearErrors(paySheet);
-  el('home-status').textContent = '';
-  justAddedId = null;
+  setStatus('');
+  justAddedIds = [];
   payAmount.value = '';
+  resetPayQuestion();
   el('pay-title').textContent = firstTime ? 'How much was your paycheck?' : 'How much did you get paid?';
   el('pay-title').classList.remove('visually-hidden');
   el('pay-cancel').textContent = firstTime ? 'Not paid yet' : 'Cancel';
@@ -278,6 +357,19 @@ function openPaySheet(firstTime = false) {
     same.textContent = `Same as last time (${formatCents(last.cents)})`;
     same.dataset.amount = centsToInput(last.cents);
   }
+
+  // Say so if a paycheck was logged in the last few days, so it isn't logged twice (REVIEW.md L1).
+  const latest = state.paychecks.reduce((a, b) => (b.date >= a.date ? b : a), state.paychecks[0]);
+  const note = latest ? lastPaycheckNote(latest.date, latest.cents, today) : '';
+  el('pay-last').textContent = note;
+  el('pay-last').hidden = note === '';
+
+  // Offer to add paydays that were clearly skipped (REVIEW.md L2).
+  missed = missedPaydays(state.paychecks, today);
+  payMissed.hidden = missed.length === 0;
+  payMissed.textContent = missed.length > 0 ? missedChip(missed, today) : '';
+  payMissed.setAttribute('aria-pressed', 'false');
+
   openSheet(paySheet);
   payAmount.focus();
 }
@@ -290,7 +382,12 @@ el('pay-close').addEventListener('click', () => paySheet.close());
 el('pay-same').addEventListener('click', () => {
   payAmount.value = el('pay-same').dataset.amount ?? '';
   clearErrors(paySheet);
+  resetPayQuestion();
   payAmount.focus();
+});
+
+payMissed.addEventListener('click', () => {
+  payMissed.setAttribute('aria-pressed', String(payMissed.getAttribute('aria-pressed') !== 'true'));
 });
 
 el('pay-form').addEventListener('submit', (event) => {
@@ -302,9 +399,25 @@ el('pay-form').addEventListener('submit', (event) => {
     showError('pay-amount-error', amount.error, payAmount);
     return;
   }
-  let next;
+  const last = state.paychecks[state.paychecks.length - 1];
+  const warning = bigAmountWarning(amount.cents, last ? last.cents : null);
+  if (warning !== '' && confirmedCents !== amount.cents) {
+    showError('pay-amount-error', warning, payAmount);
+    confirmedCents = amount.cents;
+    paySubmit.textContent = `Yes, add ${formatCents(amount.cents)}`;
+    return;
+  }
+
+  const today = localISODate();
+  const backfill = payMissed.getAttribute('aria-pressed') === 'true' ? missed : [];
+  let next = state;
+  /** @type {string[]} */
+  const ids = [];
   try {
-    next = addPaycheck(state, { date: localISODate(), cents: amount.cents });
+    for (const date of [...backfill, today]) {
+      next = addPaycheck(next, { date, cents: amount.cents });
+      ids.push(next.paychecks[next.paychecks.length - 1].id);
+    }
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
     showError('pay-amount-error', error.message, payAmount);
@@ -315,25 +428,26 @@ el('pay-form').addEventListener('submit', (event) => {
     paySheet.close();
     return;
   }
-  justAddedId = added.id;
-  showPayResult(added);
+  justAddedIds = ids;
+  showPayResult(added, backfill);
 });
 
 /**
  * Where the money went, and each goal's new timeline.
- * @param {import('./storage.js').Paycheck} added
+ * @param {import('./storage.js').Paycheck} added today's paycheck
+ * @param {string[]} backfill missed paydays added too
  */
-function showPayResult(added) {
+function showPayResult(added, backfill) {
   if (!state) return;
-  el('pay-sentence').textContent = `Nice. ${paycheckSentence(added.cents, paycheckParts(added))}`;
   const today = localISODate();
-  const plan = homePlan(state, today);
-  el('pay-timeline').replaceChildren(...plan.goals.map((g) => {
+  el('pay-sentence').textContent = `Nice. ${paycheckSentence(added.cents, paycheckParts(added))}`;
+  const when = joinAnd(backfill.map((d) => shortDateFrom(d, today)));
+  el('pay-extra').textContent = backfill.length === 1 ? `Also added the paycheck from ${when}.`
+    : backfill.length > 1 ? `Also added the ${backfill.length} paychecks from ${when}.` : '';
+  el('pay-extra').hidden = backfill.length === 0;
+  el('pay-timeline').replaceChildren(...homePlan(state, today).goals.map((g) => {
     const li = document.createElement('li');
-    li.textContent = goalTimeline({
-      name: g.name, savedCents: g.savedCents, targetCents: g.targetCents, weeks: g.weeks,
-      hasPay: true, goalsPercent: state?.split.goals ?? 0, todayISO: today,
-    });
+    li.textContent = `${g.name}: ${g.line.charAt(0).toLowerCase()}${g.line.slice(1)}`;
     return li;
   }));
   el('pay-entry').hidden = true;
@@ -342,20 +456,41 @@ function showPayResult(added) {
   el('pay-close').focus();
 }
 
-el('pay-undo').addEventListener('click', () => {
-  if (!state || !justAddedId) return;
-  let next;
+/** Take back the paychecks just added. Returns false if their money was already used. */
+function undoAdded() {
+  if (!state || justAddedIds.length === 0) return true;
+  let next = state;
   try {
-    next = removePaycheck(state, justAddedId);
+    for (const id of [...justAddedIds].reverse()) next = removePaycheck(next, id);
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
+    return false;
+  }
+  if (!commit(next)) return true;
+  justAddedIds = [];
+  setStatus('Paycheck removed.');
+  return true;
+}
+
+el('pay-undo').addEventListener('click', () => {
+  if (!undoAdded()) {
     el('pay-undo-error').textContent = "That paycheck can't be taken back now, because its money was already used.";
     return;
   }
-  if (!commit(next)) return;
-  justAddedId = null;
+  const message = el('home-status').textContent;
   paySheet.close();
-  el('home-status').textContent = 'Paycheck removed.';
+  setStatus(message);
+});
+
+// After "Done" (or a quick double tap past the summary), Undo stays on Home (REVIEW.md L5).
+paySheet.addEventListener('close', () => {
+  if (justAddedIds.length === 0) return;
+  setStatus('Paycheck added.', {
+    label: 'Undo paycheck',
+    run: () => {
+      if (!undoAdded()) setStatus("That paycheck can't be taken back now, because its money was already used.");
+    },
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -387,12 +522,14 @@ function openGoalSheet(id) {
   const goal = id ? state.goals.find((g) => g.id === id) : undefined;
   sheetGoalId = goal ? goal.id : null;
   clearErrors(goalSheet);
-  el('home-status').textContent = '';
+  setStatus('');
   goalName.value = goal ? goal.name : '';
   goalPrice.value = goal ? centsToInput(goal.targetCents) : '';
   el('goal-title').textContent = goal ? `Edit "${goal.name}"` : 'Add a goal';
   el('goal-more').hidden = !goal;
-  el('goal-up').hidden = !goal || state.goals[0].id === goal.id;
+  const index = goal ? state.goals.indexOf(goal) : -1;
+  el('goal-up').hidden = index < 1;
+  el('goal-top').hidden = index < 2; // second place: "Move up" already is "to the top"
   openSheet(goalSheet);
   goalName.focus();
 }
@@ -428,7 +565,7 @@ el('goal-form').addEventListener('submit', (event) => {
   const savedName = editedId ? next.goals.find((g) => g.id === editedId)?.name : next.goals[next.goals.length - 1].name;
   goalSheet.close();
   if (!commit(next)) return;
-  el('home-status').textContent = editedId ? `Saved "${savedName}".` : `Added "${savedName}".`;
+  setStatus(editedId ? `Saved "${savedName}".` : `Added "${savedName}".`);
   focusGoal(editedId ?? next.goals[next.goals.length - 1].id);
 });
 
@@ -438,7 +575,17 @@ el('goal-up').addEventListener('click', () => {
   const goal = state.goals.find((g) => g.id === id);
   goalSheet.close();
   if (!goal || !commit(moveGoal(state, id, -1))) return;
-  el('home-status').textContent = `Moved "${goal.name}" up.`;
+  setStatus(`Moved "${goal.name}" up.`);
+  focusGoal(id);
+});
+
+el('goal-top').addEventListener('click', () => {
+  if (!state || !sheetGoalId) return;
+  const id = sheetGoalId;
+  const goal = state.goals.find((g) => g.id === id);
+  goalSheet.close();
+  if (!goal || !commit(moveGoalToTop(state, id))) return;
+  setStatus(`Moved "${goal.name}" to the top.`);
   focusGoal(id);
 });
 
@@ -452,7 +599,7 @@ el('goal-remove').addEventListener('click', () => {
   if (!window.confirm(`Remove "${goal.name}"? The money saved for it stays in Goals ${where}.`)) return;
   goalSheet.close();
   if (!commit(removeGoal(state, id))) return;
-  el('home-status').textContent = `Removed "${goal.name}". Its money stays in Goals.`;
+  setStatus(`Removed "${goal.name}". Its money stays in Goals.`);
 });
 
 /** @param {string} id */
@@ -461,7 +608,7 @@ function openBuySheet(id) {
   if (!goal) return;
   sheetGoalId = id;
   clearErrors(buySheet);
-  el('home-status').textContent = '';
+  setStatus('');
   el('buy-title').textContent = `Did you buy ${goal.name}?`;
   buyPrice.value = centsToInput(goal.targetCents);
   openSheet(buySheet);
@@ -490,9 +637,33 @@ el('buy-form').addEventListener('submit', (event) => {
   const record = next.goalPurchases?.[next.goalPurchases.length - 1];
   buySheet.close();
   if (!record || !commit(next)) return;
-  el('home-status').textContent = buySentence(record.cents, record.name, price.cents);
+  const extra = price.cents - record.cents;
+  // With tracking on, the extra can come out of Spend in one tap (REVIEW.md L9).
+  const action = extra > 0 && state?.settings?.trackSpending === true
+    ? { label: `Take ${formatCents(extra)} from Spend`, run: () => takeFromSpend(extra, `Extra for ${record.name}`) }
+    : null;
+  setStatus(buySentence(record.cents, record.name, price.cents), action);
   el('headline').focus();
 });
+
+/**
+ * Log a purchase from Spend for the part of a goal buy that Goals didn't cover.
+ * @param {number} cents
+ * @param {string} note
+ */
+function takeFromSpend(cents, note) {
+  if (!state) return;
+  let next;
+  try {
+    next = addPurchase(state, { date: localISODate(), cents, note });
+  } catch (error) {
+    if (!(error instanceof OverspendError)) throw error;
+    setStatus(overspendMessage(error.availableCents));
+    return;
+  }
+  if (!commit(next)) return;
+  setStatus(purchaseSentence(cents, balances(next).spend));
+}
 
 el('goal-cards').addEventListener('click', (event) => {
   const button = /** @type {HTMLElement} */ (event.target).closest('button[data-action]');
@@ -516,6 +687,7 @@ function clearSettingsMessages() {
   for (const node of settingsSheet.querySelectorAll('.result')) node.textContent = '';
   clearErrors(settingsSheet);
   el('split-hint').hidden = false;
+  el('history-action').hidden = true;
 }
 
 function openSettings() {
@@ -531,7 +703,25 @@ function openSettings() {
 }
 
 el('open-settings').addEventListener('click', openSettings);
-el('settings-done').addEventListener('click', () => settingsSheet.close());
+/** Close Settings, but ask first if a new, valid split wasn't saved. */
+function closeSettings() {
+  const result = readSplitInputs(splitValues());
+  if (state && result.ok) {
+    const now = state.split;
+    const { spend, save, goals } = result.split;
+    if ((spend !== now.spend || save !== now.save || goals !== now.goals)
+      && window.confirm(`Save your new split (${spend}% Spend, ${save}% Save, ${goals}% Goals)?`)) {
+      commit(setSplit(state, result.split));
+    }
+  }
+  settingsSheet.close();
+}
+
+el('settings-done').addEventListener('click', closeSettings);
+settingsSheet.addEventListener('cancel', (event) => {
+  event.preventDefault();
+  closeSettings();
+});
 
 /** The split hint and, when the split is valid, what it would mean. */
 function renderSplitPreview() {
@@ -545,10 +735,9 @@ function renderSplitPreview() {
   if (!result.ok) return;
   const today = localISODate();
   const plan = homePlan(state, today, result.split);
-  const lines = [plan.headline, ...plan.goals.map((g) => goalTimeline({
-    name: g.name, savedCents: g.savedCents, targetCents: g.targetCents, weeks: g.weeks,
-    hasPay: plan.basis !== '', goalsPercent: result.split.goals, todayISO: today,
-  }))];
+  const lines = [plan.headline, ...plan.goals.map((g) => (result.split.goals === 0 && !g.funded
+    ? `${g.name}: nothing goes to Goals with this split`
+    : `${g.name}: ${g.line.charAt(0).toLowerCase()}${g.line.slice(1)}`))];
   el('split-preview').replaceChildren(...lines.map((line) => {
     const li = document.createElement('li');
     li.textContent = line;
@@ -559,6 +748,7 @@ function renderSplitPreview() {
 for (const input of Object.values(splitInputs)) {
   input.addEventListener('input', () => {
     clearErrors(el('split-form'));
+    el('split-result').textContent = '';
     el('split-hint').hidden = false;
     renderSplitPreview();
   });
@@ -583,6 +773,9 @@ el('split-form').addEventListener('submit', (event) => {
 function renderMoney() {
   if (!state) return;
   const totals = balances(state);
+  if (state.settings?.trackSpending !== true) {
+    totals.spend += state.purchases.reduce((sum, b) => sum + b.cents, 0);
+  }
   el('money').replaceChildren(...[['Spend', totals.spend], ['Save', totals.save], ['Goals', totals.goals]].map(([name, cents]) => {
     const li = document.createElement('li');
     const label = document.createElement('span');
@@ -624,7 +817,7 @@ function renderHistory() {
     what.textContent = words.what;
     const when = document.createElement('span');
     when.className = 'history-when';
-    when.textContent = shortDate(item.date);
+    when.textContent = item.kind === 'goalPurchase' ? `${shortDate(item.date)} · from Goals` : shortDate(item.date);
     text.append(what, when);
     const amount = document.createElement('span');
     amount.className = item.kind === 'paycheck' ? 'history-amount in' : 'history-amount';
@@ -683,10 +876,38 @@ el('history').addEventListener('click', (event) => {
   if (!commit(next)) return;
   if (kind === 'paycheck') el('history-result').textContent = 'Paycheck removed.';
   else if (kind === 'purchase') el('history-result').textContent = 'Purchase removed. The money is back in Spend.';
-  else el('history-result').textContent =
-    `Undone. ${formatCents(record?.cents ?? 0)} is back in Goals. Add the goal again if you still want it.`;
+  else {
+    el('history-result').textContent =
+      `Undone. ${formatCents(record?.cents ?? 0)} is back in Goals. Add the goal again if you still want it.`;
+    if (record) offerAddBack(record);
+  }
   el('history-title').focus();
 });
+
+/**
+ * "Add it back": the undone goal returns at the top, with the price that came out of Goals.
+ * @param {import('./storage.js').GoalPurchase} record
+ */
+function offerAddBack(record) {
+  const button = el('history-action');
+  button.textContent = 'Add it back';
+  button.hidden = false;
+  button.onclick = () => {
+    if (!state) return;
+    let next;
+    try {
+      next = addGoal(state, { name: record.name, targetCents: record.cents });
+      next = moveGoalToTop(next, next.goals[next.goals.length - 1].id);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      el('history-error').textContent = error.message;
+      return;
+    }
+    if (!commit(next)) return;
+    clearSettingsMessages();
+    el('history-result').textContent = `${record.name} is back at the top, with its ${formatCents(record.cents)}.`;
+  };
+}
 
 function renderSettings() {
   if (!state) return;
@@ -719,7 +940,7 @@ for (const input of [purchaseAmount, purchaseNote]) input.addEventListener('inpu
 el('log-purchase').addEventListener('click', () => {
   if (!state) return;
   clearErrors(purchaseSheet);
-  el('home-status').textContent = '';
+  setStatus('');
   purchaseAmount.value = '';
   purchaseNote.value = '';
   el('purchase-left').textContent = spendAvailable(balances(state).spend, state.paychecks.length > 0);
@@ -753,7 +974,7 @@ el('purchase-form').addEventListener('submit', (event) => {
   }
   purchaseSheet.close();
   if (!commit(next)) return;
-  el('home-status').textContent = purchaseSentence(amount.cents, balances(next).spend);
+  setStatus(purchaseSentence(amount.cents, balances(next).spend));
 });
 
 /** The Spending card on Home: what's left and the latest three records. */
@@ -773,7 +994,7 @@ function renderSpending() {
     what.textContent = words.what;
     const when = document.createElement('span');
     when.className = 'history-when';
-    when.textContent = shortDate(item.date);
+    when.textContent = item.kind === 'goalPurchase' ? `${shortDate(item.date)} · from Goals` : shortDate(item.date);
     text.append(what, when);
     const amount = document.createElement('span');
     amount.className = item.kind === 'paycheck' ? 'history-amount in' : 'history-amount';
@@ -836,7 +1057,8 @@ backupFile.addEventListener('change', async () => {
   const message = `Backup restored: ${count(restored.paychecks.length, 'paycheck')}, `
     + `${count(restored.purchases.length, 'purchase')}, ${count(restored.goals.length, 'goal')} `
     + `and ${count(restored.goalPurchases?.length ?? 0, 'goal buy')}.`;
-  el(firstRun ? 'home-status' : 'backup-result').textContent = message;
+  if (firstRun) setStatus(message);
+  else el('backup-result').textContent = message;
 });
 
 // ---------------------------------------------------------------------------
@@ -911,7 +1133,68 @@ function render() {
   el('goals-empty').hidden = plan.goals.length > 0;
   renderSpending();
   el('install-card').hidden = !installHelpWanted();
+  el('backup-card').hidden = !backupDue(state.paychecks.length, readBackupMark());
+  // Before the first paycheck, the headline itself opens the paycheck sheet.
+  if (plan.basis === '') {
+    el('headline').setAttribute('role', 'button');
+    el('headline').tabIndex = 0;
+  } else {
+    el('headline').removeAttribute('role');
+    el('headline').tabIndex = -1;
+  }
 }
+
+// ---------------------------------------------------------------------------
+// Backup nudge (SPEC.md "Backup nudge", REVIEW.md L4): every 4 paychecks since the last backup
+// (or "Not now") on this phone. The count is kept on this phone only, beside the data.
+
+const BACKUP_MARK_KEY = 'budgeteer.backupAt';
+let backupMark = /** @type {number | null} */ (null);
+
+/** Paychecks there were at the last backup or "Not now", or null if never. */
+function readBackupMark() {
+  try {
+    const saved = storage?.getItem(BACKUP_MARK_KEY);
+    if (typeof saved === 'string' && /^\d{1,9}$/.test(saved)) return Number(saved);
+  } catch {
+    // Storage is off; use what this visit remembers.
+  }
+  return backupMark;
+}
+
+/** Remember that a backup was made (or put off) now. */
+function markBackup() {
+  if (!state) return;
+  backupMark = state.paychecks.length;
+  try {
+    storage?.setItem(BACKUP_MARK_KEY, String(backupMark));
+  } catch {
+    // Storage is off; it stays hidden for this visit.
+  }
+  el('backup-card').hidden = true;
+}
+
+el('backup-card-download').addEventListener('click', () => {
+  if (!state) return;
+  downloadText(backupFileName(localISODate()), exportBackup(state), 'application/json');
+  markBackup();
+  setStatus('Backup downloaded. Keep the file somewhere safe.');
+});
+el('backup-card-later').addEventListener('click', markBackup);
+el('backup-download').addEventListener('click', markBackup);
+
+// "Log your first paycheck" opens the paycheck sheet (REVIEW.md L12).
+const headline = el('headline');
+const headlineOpensSheet = () => headline.getAttribute('role') === 'button';
+headline.addEventListener('click', () => {
+  if (headlineOpensSheet()) openPaySheet();
+});
+headline.addEventListener('keydown', (event) => {
+  if (headlineOpensSheet() && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault();
+    openPaySheet();
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Installing (docs/adr/0001): the iPhone help card, and the service worker for offline use.

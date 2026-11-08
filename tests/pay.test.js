@@ -1,7 +1,7 @@
 // Weekly pay learned from paycheck gaps (ticket 012, SPEC.md "The numbers", docs/adr/0004).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { paydays, usualGapDays, weeklyPay, weeklySpendCents, gotPaidDue } from '../src/pay.js';
+import { paydays, usualGapDays, weeklyPay, weeklySpendCents, gotPaidDue, missedPaydays } from '../src/pay.js';
 
 const TODAY = '2026-11-07';
 /** @param {string} date @param {number} cents */
@@ -77,4 +77,35 @@ test('"Got paid? Log it." shows once the last payday is more than the usual gap 
   assert.equal(gotPaidDue(weekly, '2026-11-10'), false); // 9 days
   assert.equal(gotPaidDue(weekly, '2026-11-11'), true); // 10 days
   assert.equal(gotPaidDue([], TODAY), false);
+});
+
+// Second review (REVIEW.md L1, L2)
+
+test('L1: paychecks less than 4 days apart count as one payday, so a duplicate cannot fake a 1-day gap', () => {
+  const list = [pay('2026-11-07', 31247), pay('2026-11-08', 31247)];
+  assert.deepEqual(paydays(list, '2026-11-08'), [{ date: '2026-11-07', cents: 62494 }]);
+  assert.equal(usualGapDays(list, '2026-11-08'), 14);
+});
+
+test('L1: two jobs paying on different days of the week still give the right weekly pay', () => {
+  // Job A pays $100 on Mondays, job B $50 on Thursdays.
+  const dates = ['2026-10-19', '2026-10-22', '2026-10-26', '2026-10-29', '2026-11-02', '2026-11-05'];
+  const list = dates.map((d, i) => pay(d, i % 2 === 0 ? 10000 : 5000));
+  assert.equal(usualGapDays(list, TODAY), 7);
+  assert.deepEqual(weeklyPay(list, TODAY), { cents: 45000, days: 21 }); // $150 a week
+});
+
+test('L2: missedPaydays lists the paydays the teen clearly skipped', () => {
+  const one = [pay('2026-11-07', 100)]; // every 2 weeks
+  assert.deepEqual(missedPaydays(one, '2026-11-23'), []); // just late
+  assert.deepEqual(missedPaydays(one, '2026-12-05'), ['2026-11-21']);
+  assert.deepEqual(missedPaydays(one, '2026-12-19'), ['2026-11-21', '2026-12-05']);
+  const weekly = [pay('2026-10-25', 100), pay('2026-11-01', 100)];
+  assert.deepEqual(missedPaydays(weekly, '2026-11-15'), ['2026-11-08']);
+  assert.deepEqual(missedPaydays([], TODAY), []);
+});
+
+test('L2: logging the missed payday keeps weekly pay where it was', () => {
+  const list = [pay('2026-11-07', 31247), pay('2026-11-21', 31247), pay('2026-12-05', 31247)];
+  assert.deepEqual(weeklyPay(list, '2026-12-05'), { cents: 93741, days: 42 }); // $156.24 a week, as before
 });

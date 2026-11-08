@@ -69,7 +69,10 @@
       <section class="headline-card" aria-label="What to spend">
         <p id="headline" class="headline" tabindex="-1"></p>
         <p id="basis" class="muted basis"></p>
-        <p id="home-status" class="result" role="status"></p>
+        <div class="status-row">
+          <p id="home-status" class="result" role="status"></p>
+          <button type="button" id="home-status-action" class="link" hidden></button>
+        </div>
       </section>
       <section aria-label="Your goals">
         <ol id="goal-cards" class="goal-cards"></ol>
@@ -83,10 +86,20 @@
         <button type="button" id="log-purchase" class="secondary wide">Log a purchase</button>
         <ul id="recent" class="history recent" aria-label="Latest"></ul>
       </section>
+      <!-- Every 4 paychecks since the last backup on this phone (SPEC.md "Backup nudge"). -->
+      <section id="backup-card" class="card" aria-labelledby="backup-card-title" hidden>
+        <h2 id="backup-card-title">Back up your info</h2>
+        <p>Your info lives only on this phone. Save a backup file now and then, so you can get it back on a new phone.</p>
+        <div class="stack">
+          <button type="button" id="backup-card-download" class="primary wide">Download backup</button>
+          <button type="button" id="backup-card-later" class="link">Not now</button>
+        </div>
+      </section>
       <!-- iPhone has no install prompt, so this explains it (only in Safari, until dismissed). -->
       <section id="install-card" class="card install" aria-labelledby="install-card-title" hidden>
         <h2 id="install-card-title">Put Budgeteer on your Home Screen</h2>
         <p>Tap the Share button, then "Add to Home Screen". Budgeteer then opens like an app and works without internet.</p>
+        <p class="muted">Until then, Safari may clear your info if you don't open Budgeteer for a week.</p>
         <button type="button" id="install-dismiss" class="secondary wide">Got it</button>
       </section>
     </main>
@@ -102,6 +115,7 @@
     <h2 id="pay-title">How much did you get paid?</h2>
     <form id="pay-form" novalidate>
       <div id="pay-entry">
+        <p id="pay-last" class="notice small-notice" hidden></p>
         <div class="field">
           <label for="pay-amount">Take-home amount</label>
           <div class="money-input big-amount">
@@ -114,8 +128,9 @@
         </div>
         <div class="chips">
           <button type="button" id="pay-same" class="chip" hidden></button>
+          <button type="button" id="pay-missed" class="chip" aria-pressed="false" hidden></button>
         </div>
-        <button type="submit" class="primary big">Add paycheck</button>
+        <button type="submit" id="pay-submit" class="primary big">Add paycheck</button>
         <div class="row-center">
           <button type="button" id="pay-cancel" class="link">Cancel</button>
         </div>
@@ -123,6 +138,7 @@
     </form>
     <div id="pay-done" hidden>
       <p id="pay-sentence" class="pay-sentence"></p>
+      <p id="pay-extra" class="muted" hidden></p>
       <ul id="pay-timeline" class="timeline"></ul>
       <p id="pay-undo-error" class="error" role="alert"></p>
       <button type="button" id="pay-close" class="primary big">Done</button>
@@ -198,6 +214,7 @@
       <button type="button" id="history-toggle" class="secondary wide" hidden></button>
       <p id="history-error" class="error" role="alert"></p>
       <p id="history-result" class="result" role="status"></p>
+      <button type="button" id="history-action" class="secondary wide" hidden></button>
     </section>
 
     <section class="settings-section" aria-labelledby="backup-title">
@@ -271,6 +288,7 @@
       <button type="submit" class="primary big">Save goal</button>
     </form>
     <div id="goal-more" class="goal-more">
+      <button type="button" id="goal-top" class="secondary wide">Move to top</button>
       <button type="button" id="goal-up" class="secondary wide">Move up</button>
       <button type="button" id="goal-remove" class="danger wide">Remove this goal</button>
     </div>

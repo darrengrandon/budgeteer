@@ -2,7 +2,7 @@
 id: 021
 title: Second fresh-eyes review, as a lazy teenager
 depends_on: [020]
-status: todo
+status: done
 ---
 
 ## Goal

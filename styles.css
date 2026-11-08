@@ -768,3 +768,32 @@ dialog.sheet.full {
 .install h2 {
   font-size: 1.1rem;
 }
+
+/* Second review fixes */
+
+.status-row .link {
+  margin-top: 0.25rem;
+}
+
+.small-notice {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+#history-action {
+  margin-top: 0.5rem;
+}
+
+.headline[role="button"] {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
