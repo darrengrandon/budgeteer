@@ -5,13 +5,17 @@ import { formatCents } from './money.js';
 import { addDays, dayNumber } from './budget.js';
 
 /**
- * "Your $42.50 became $21.25 to spend, $12.75 saved, $8.50 for goals."
+ * "Your $42.50 became $21.25 to spend, $12.75 saved, $8.50 for goals." With the weekly spend
+ * number, it goes in brackets after the Spend part, so the paycheck result and the Home
+ * headline show one spend number (step 3c): "...$21.25 to spend (about $11 a week), ...".
  * @param {number} cents the whole paycheck
  * @param {{ spend: number, save: number, goals: number }} parts cents per bucket
+ * @param {number | null} [weeklySpendCents] the Home headline's number; none or 0 leaves it out
  * @returns {string}
  */
-export function paycheckSentence(cents, parts) {
-  return `Your ${formatCents(cents)} became ${formatCents(parts.spend)} to spend, `
+export function paycheckSentence(cents, parts, weeklySpendCents) {
+  const week = weeklySpendCents ? ` (about ${aboutAmount(weeklySpendCents)} a week)` : '';
+  return `Your ${formatCents(cents)} became ${formatCents(parts.spend)} to spend${week}, `
     + `${formatCents(parts.save)} saved, ${formatCents(parts.goals)} for goals.`;
 }
 

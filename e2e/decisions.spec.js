@@ -37,7 +37,7 @@ test('decision 2: "Yes, log another" saves the second paycheck', async ({ page }
   await seed(page, v2({ paychecks: [P('p1', '2026-11-07', 21240)] }));
   await tryToLog(page, '212.40');
   await page.getByRole('button', { name: 'Yes, log another' }).click();
-  await expect(page.getByText('Nice. Your $212.40 became $106.20 to spend, $63.72 saved, $42.48 for goals.')).toBeVisible();
+  await expect(page.getByText('Nice. Your $212.40 became $106.20 to spend (about $106 a week), $63.72 saved, $42.48 for goals.')).toBeVisible();
   expect(await historyCount(page)).toBe(2);
 });
 

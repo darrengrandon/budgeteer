@@ -50,7 +50,7 @@ export function backupDue(paycheckCount, lastCount) {
  * @param {string} todayISO
  * @param {Split} [split]
  * @returns {{ headline: string, basis: string, nudge: boolean, goals: GoalCard[],
- *   explain: { headline: string, basis: string } }}
+ *   explain: { headline: string, basis: string }, weeklySpendCents: number | null }}
  */
 export function homePlan(state, todayISO, split = state.split) {
   const frequency = state.settings?.payFrequency ?? 'varies';
@@ -70,6 +70,7 @@ export function homePlan(state, todayISO, split = state.split) {
   let targetSoFar = 0;
   return {
     headline: spendHeadline(weeklySpend),
+    weeklySpendCents: weeklySpend,
     basis: pay ? payBasis(weeklyPayCents) : '',
     nudge: gotPaidDue(state.paychecks, todayISO, frequency),
     explain: pay ? {

@@ -507,7 +507,7 @@ el('pay-form').addEventListener('submit', (event) => {
 function showPayResult(added, backfill, isFirst) {
   if (!state) return;
   const today = localISODate();
-  el('pay-sentence').textContent = `Nice. ${paycheckSentence(added.cents, paycheckParts(added))}`;
+  resultPaycheck = added;
   const when = joinAnd(backfill.map((d) => shortDateFrom(d, today)));
   el('pay-extra').textContent = backfill.length === 1 ? `Also added the paycheck from ${when}.`
     : backfill.length > 1 ? `Also added the ${backfill.length} paychecks from ${when}.` : '';
@@ -515,17 +515,22 @@ function showPayResult(added, backfill, isFirst) {
   el('pay-often').hidden = !isFirst;
   for (const chip of oftenChips) chip.setAttribute('aria-pressed', 'false');
   el('pay-often-saved').textContent = '';
-  drawPayTimeline();
+  drawPayResult();
   el('pay-entry').hidden = true;
   el('pay-done').hidden = false;
   el('pay-title').classList.add('visually-hidden'); // the question is answered; it still names the sheet
   el('pay-close').focus();
 }
 
-/** Each goal's timeline on the paycheck result, as it is now. */
-function drawPayTimeline() {
-  if (!state) return;
-  el('pay-timeline').replaceChildren(...homePlan(state, localISODate()).goals.map((g) => {
+/** The paycheck on the result screen. */
+let resultPaycheck = /** @type {import('./storage.js').Paycheck | null} */ (null);
+
+/** Where the money went, with the same weekly spend number as Home (step 3c), and each goal's timeline. */
+function drawPayResult() {
+  if (!state || !resultPaycheck) return;
+  const plan = homePlan(state, localISODate());
+  el('pay-sentence').textContent = `Nice. ${paycheckSentence(resultPaycheck.cents, paycheckParts(resultPaycheck), plan.weeklySpendCents)}`;
+  el('pay-timeline').replaceChildren(...plan.goals.map((g) => {
     const li = document.createElement('li');
     li.textContent = `${g.name}: ${g.line.charAt(0).toLowerCase()}${g.line.slice(1)}`;
     return li;
@@ -540,7 +545,7 @@ for (const chip of oftenChips) {
     if (!commit(setPayFrequency(state, frequency))) return;
     for (const other of oftenChips) other.setAttribute('aria-pressed', String(other === chip));
     el('pay-often-saved').textContent = 'Saved. You can change it in Settings.';
-    drawPayTimeline();
+    drawPayResult();
   });
 }
 
