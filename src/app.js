@@ -42,6 +42,7 @@ import {
   unassignedNote,
   whatIfLine,
   whatIfWeekly,
+  spendAvailable,
 } from './words.js';
 import { readAmount, readPastDate, readSplitInputs, toPercent } from './forms.js';
 
@@ -714,8 +715,8 @@ el('history').addEventListener('click', (event) => {
   const { id, kind } = button.dataset;
   if (!id) return;
   clearMessages();
-  if (!window.confirm(`${button.getAttribute('aria-label')}? You can't undo this.`)) return;
 
+  // Check first, so the teen is never asked to confirm something that then gets refused.
   let next;
   try {
     next = kind === 'paycheck' ? removePaycheck(state, id) : removePurchase(state, id);
@@ -725,6 +726,7 @@ el('history').addEventListener('click', (event) => {
       "You can't remove this paycheck because you've already spent part of it. Remove some purchases first.";
     return;
   }
+  if (!window.confirm(`${button.getAttribute('aria-label')}? You can't undo this.`)) return;
   if (!commit(next)) return;
   el('history-result').textContent = kind === 'paycheck' ? 'Paycheck removed.' : 'Purchase removed. The money is back in Spend.';
   el('history-title').focus();
@@ -800,9 +802,7 @@ function render() {
   el('pct-save').textContent = `${split.save}% of each paycheck`;
   el('pct-goals').textContent = `${split.goals}% of each paycheck`;
   el('current-split').textContent = `${split.spend}% Spend, ${split.save}% Save, ${split.goals}% Goals`;
-  el('purchase-available').textContent = totals.spend > 0
-    ? `You have ${formatCents(totals.spend)} to spend.`
-    : 'Your Spend bucket is empty. Log a paycheck first.';
+  el('purchase-available').textContent = spendAvailable(totals.spend, state.paychecks.length > 0);
   renderGoals(state);
   renderWhatIf(state);
   renderHistory(state);

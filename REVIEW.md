@@ -305,7 +305,8 @@ is the same in every time zone.
 ## Resolution (by the builder)
 
 Every fix below had a failing test first (unit tests in `tests/`, browser tests in
-`e2e/review.spec.js`), then the fix. Commit `7a7512a`. No existing test was changed.
+`e2e/review.spec.js`), then the fix. Commit `7a7512a`. Two existing assertions in
+`e2e/purchase.spec.js` were changed for U9 and U12, with the owner's OK (CLAUDE.md).
 
 | Finding | Outcome | Test that failed first |
 |---|---|---|
@@ -320,7 +321,7 @@ Every fix below had a failing test first (unit tests in `tests/`, browser tests 
 | U10 forms far down | Fixed. Order is now Your money, Log a paycheck, Log a purchase, Goals, What if?, Recent activity, Backup, Settings. | e2e "U10" |
 | U11 / C10 error twice, error far away | Fixed. The split hint hides while its alert shows; every form error sits under its own box. | e2e "U11" |
 | U12 Escape, focus after edit | Fixed. | e2e "U12" |
-| U12 "Log a paycheck first" wording | **Waiting for the owner.** The fix changes text that `e2e/purchase.spec.js` asserts, and CLAUDE.md says to ask before editing a test. | — |
-| U9 / C9 confirm, then refuse | **Waiting for the owner.** Checking before the confirm changes the dialog sequence `e2e/purchase.spec.js` follows; same reason. | — |
-| U6 no way to use goal money | Partly fixed: the Remove dialog now names the goal that gets the money next (e2e "U6"). **A "Bought it" action needs an owner decision**: it adds a new kind of record to the v1 state shape in SPEC.md and ticket 002. | e2e "U6" |
+| U12 "Log a paycheck first" wording | Fixed after the owner agreed to update the expected text in `e2e/purchase.spec.js`. It now reads "Log your next paycheck to add more." once paychecks exist. | unit `spendAvailable`; updated e2e assertion |
+| U9 / C9 confirm, then refuse | Fixed after the owner agreed to update `e2e/purchase.spec.js`. The removal is checked first, and a refused one shows its message with no dialog. The test now also checks that no dialog appears. | updated e2e "recent activity…" |
+| U6 no way to use goal money | Partly fixed: the Remove dialog now names the goal that gets the money next. A "Bought it" action changes the data and backup format, so at the owner's request it is written up as `tasks/010-goal-bought.md` for approval and not built yet. | e2e "U6" |
 | C11 Python and `@ts-check` | Not fixing. Ticket 008 asks for `python3 -m http.server` by name, and `// @ts-check` only lets an editor check the JSDoc types in plain JS (no build step, no TypeScript). | — |

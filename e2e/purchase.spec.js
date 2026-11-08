@@ -33,7 +33,8 @@ test('purchases come out of Spend, down to exactly zero, and one cent over is bl
   await logIt.click();
   await expect(page.getByText('Logged. $6.00 came out of Spend. Your Spend bucket is now empty.')).toBeVisible();
   await expect(spend).toHaveText('$0.00');
-  await expect(page.getByText('Your Spend bucket is empty. Log a paycheck first.')).toBeVisible();
+  // A paycheck was logged, so don't tell them to log one "first" (review U12, changed with the owner's OK).
+  await expect(page.getByText('Your Spend bucket is empty. Log your next paycheck to add more.')).toBeVisible();
 
   await amount.fill('0.01');
   await logIt.click();
@@ -61,10 +62,17 @@ test('recent activity lists entries and Remove fixes mistakes', async ({ page })
   await expect(items.nth(1)).toContainText('+$20.00');
   await expect(page.locator('#history b')).toHaveCount(0);
 
-  // The paycheck was partly spent, so it can't be removed yet.
-  page.once('dialog', (dialog) => dialog.accept());
+  // The paycheck was partly spent, so it can't be removed yet. The page says so straight away,
+  // without first asking "You can't undo this" (fresh-eyes review U9, changed with the owner's OK).
+  /** @type {string[]} */
+  const dialogs = [];
+  /** @param {import('@playwright/test').Dialog} dialog */
+  const recordDialog = (dialog) => { dialogs.push(dialog.message()); dialog.dismiss(); };
+  page.on('dialog', recordDialog);
   await page.getByRole('button', { name: 'Remove paycheck of $20.00 from Nov 7, 2026' }).click();
   await expect(page.getByRole('alert')).toContainText("You can't remove this paycheck because you've already spent part of it.");
+  expect(dialogs).toEqual([]);
+  page.off('dialog', recordDialog);
   await expect(items).toHaveCount(2);
 
   // Saying "no" to the question changes nothing.

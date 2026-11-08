@@ -2,7 +2,7 @@
 id: 009
 title: Fresh-eyes review by a second agent
 depends_on: [008]
-status: todo
+status: done
 ---
 
 ## Goal

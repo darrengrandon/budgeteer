@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine, whatIfWeekly,
+  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine, whatIfWeekly, spendAvailable,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -132,4 +132,12 @@ test('whatIfWeekly says what goes into Goals each week, or why it cannot', () =>
   assert.equal(whatIfWeekly({ averageWeeklyCents: 5000, weeklyCents: 1000, hasPaychecks: true }), "That's about $10.00 a week into Goals.");
   assert.equal(whatIfWeekly({ averageWeeklyCents: 0, weeklyCents: 0, hasPaychecks: false }), 'Log a paycheck to see dates.');
   assert.equal(whatIfWeekly({ averageWeeklyCents: 0, weeklyCents: 0, hasPaychecks: true }), 'No paychecks in the last 4 weeks, so there are no estimates yet.');
+});
+
+// Review U12: the line above the purchase form.
+
+test('spendAvailable says what is left, and does not say "first" once paychecks exist', () => {
+  assert.equal(spendAvailable(1250, true), 'You have $12.50 to spend.');
+  assert.equal(spendAvailable(0, false), 'Your Spend bucket is empty. Log a paycheck first.');
+  assert.equal(spendAvailable(0, true), 'Your Spend bucket is empty. Log your next paycheck to add more.');
 });

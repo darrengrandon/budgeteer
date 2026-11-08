@@ -152,3 +152,16 @@ export function whatIfWeekly({ averageWeeklyCents, weeklyCents, hasPaychecks }) 
   if (averageWeeklyCents > 0) return `That's about ${formatCents(weeklyCents)} a week into Goals.`;
   return hasPaychecks ? 'No paychecks in the last 4 weeks, so there are no estimates yet.' : 'Log a paycheck to see dates.';
 }
+
+/**
+ * The line above the purchase form.
+ * @param {number} spendCents what is in Spend
+ * @param {boolean} hasPaychecks any paycheck logged at all
+ * @returns {string}
+ */
+export function spendAvailable(spendCents, hasPaychecks) {
+  if (spendCents > 0) return `You have ${formatCents(spendCents)} to spend.`;
+  return hasPaychecks
+    ? 'Your Spend bucket is empty. Log your next paycheck to add more.'
+    : 'Your Spend bucket is empty. Log a paycheck first.';
+}
