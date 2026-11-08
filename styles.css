@@ -593,6 +593,7 @@ dialog.sheet.full {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.6rem;
+  align-items: end; /* the boxes line up even when a label wraps (large text) */
 }
 
 .split-inputs .field {
