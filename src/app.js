@@ -114,13 +114,16 @@ let statusRun = null;
  * The message under the headline, with an optional button (like "Undo paycheck").
  * It fades after a while, and any saved change clears it (see commit).
  * @param {string} text
- * @param {{ label: string, run: () => void } | null} [action]
+ * @param {{ label: string, name?: string, run: () => void } | null} [action]
+ *   name: a fuller accessible name when the visible label is short ("Undo" / "Undo paycheck")
  */
 function setStatus(text, action = null) {
   el('home-status').textContent = text;
   const button = el('home-status-action');
   button.hidden = !action;
   button.textContent = action ? action.label : '';
+  if (action?.name) button.setAttribute('aria-label', action.name);
+  else button.removeAttribute('aria-label');
   statusRun = action ? action.run : null;
   clearTimeout(statusTimer);
   if (text) statusTimer = window.setTimeout(() => setStatus(''), STATUS_MS);
@@ -540,7 +543,8 @@ el('pay-undo').addEventListener('click', (event) => {
 paySheet.addEventListener('close', () => {
   if (justAddedIds.length === 0) return;
   setStatus('Paycheck added.', {
-    label: 'Undo paycheck',
+    label: 'Undo', // short, so it fits beside the message on a 320px phone (overnight fix P2b)
+    name: 'Undo paycheck',
     run: () => {
       if (!undoAdded()) setStatus("That paycheck can't be taken back now, because its money was already used.");
     },
