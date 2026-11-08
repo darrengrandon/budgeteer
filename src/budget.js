@@ -34,6 +34,21 @@ export function localISODate(date = new Date()) {
 }
 
 /**
+ * The date a whole number of days after (or before, if negative) a 'YYYY-MM-DD' date.
+ * @param {string} iso
+ * @param {number} days
+ * @returns {string}
+ */
+export function addDays(iso, days) {
+  if (!Number.isSafeInteger(days)) throw new RangeError(`days must be a whole number, got ${days}`);
+  const date = new Date((dayNumber(iso) + days) * MS_PER_DAY);
+  const year = String(date.getUTCFullYear()).padStart(4, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * True if the value is a 'YYYY-MM-DD' string for a real calendar date.
  * @param {unknown} iso
  * @returns {boolean}

@@ -173,3 +173,22 @@ test('C4: what-if trial weeks are exact too', () => {
   // At 25%: $10.625 x 25% = $2.65625 a week. $291.50 / 2.65625 = 109.7, so 110.
   assert.equal(whatIf(state, '2026-11-07', 25).trial.goals[0].weeks, 110);
 });
+
+// Ticket 012: projections can use weekly pay learned from paycheck gaps.
+
+test('projectGoals uses an exact weekly pay when one is given', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 4250 });
+  state = addGoal(state, { name: 'Phone', targetCents: 30000 });
+  // One payday: $42.50 every 14 days = $21.25 a week. 20% = $4.25. ($300 - $8.50) / $4.25 = 68.6, so 69.
+  const result = projectGoals(state, '2026-11-07', state.split, { cents: 4250, days: 14 });
+  assert.equal(result.averageWeeklyCents, 2125);
+  assert.equal(result.weeklyCents, 425);
+  assert.equal(result.goals[0].weeks, 69);
+});
+
+test('projectGoals with no weekly pay (null) gives Infinity weeks', () => {
+  const state = addGoal(emptyState(), { name: 'Phone', targetCents: 30000 });
+  const result = projectGoals(state, '2026-11-07', state.split, null);
+  assert.equal(result.averageWeeklyCents, 0);
+  assert.equal(result.goals[0].weeks, Infinity);
+});

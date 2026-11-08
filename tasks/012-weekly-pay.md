@@ -2,7 +2,7 @@
 id: 012
 title: Weekly pay from paycheck gaps, readiness dates, "Got paid?" rule
 depends_on: [011]
-status: todo
+status: done
 ---
 
 ## Goal

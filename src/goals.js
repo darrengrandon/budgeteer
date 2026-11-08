@@ -1,7 +1,7 @@
 // Goals: how Goals-bucket money is shared out, and how many weeks until each goal.
 // Pure functions. All money is integer cents.
 
-import { weeksToGoal, averageWeeklyIncome, incomeInWindow } from './budget.js';
+import { weeksToGoal, incomeInWindow } from './budget.js';
 
 const WINDOW_DAYS = 28;
 import { balances } from './storage.js';
@@ -63,21 +63,26 @@ export function goalProjections({ goalsBalanceCents, goals, weeklyCents, per = 1
 }
 
 /**
- * Everything the Goals section shows, from the records.
+ * Everything the goal cards show, from the records.
  * Pass a trial split to see "what if" weeks; it changes only future money, not what is saved.
+ * Pass weekly pay as an exact fraction { cents, days } (see src/pay.js), or null for none;
+ * without it, the 28-day window is used.
  * @param {State} state
  * @param {string} todayISO
  * @param {Split} [split] defaults to the real split
+ * @param {{ cents: number, days: number } | null} [pay]
  */
-export function projectGoals(state, todayISO, split = state.split) {
+export function projectGoals(state, todayISO, split = state.split,
+  pay = { cents: incomeInWindow(state.paychecks, todayISO, WINDOW_DAYS), days: WINDOW_DAYS }) {
+  const income = pay ?? { cents: 0, days: WINDOW_DAYS };
   const goalsBalanceCents = balances(state).goals;
-  const averageWeeklyCents = averageWeeklyIncome(state.paychecks, todayISO, WINDOW_DAYS);
   // Shown to the teen, rounded to the cent.
+  const averageWeeklyCents = Math.round((income.cents * 7) / income.days);
   const weeklyCents = weeklyGoalsCents(averageWeeklyCents, split.goals);
-  // Used for the weeks, exactly: window pay x 7 / 28 days x Goals % / 100.
-  const exactWeekly = incomeInWindow(state.paychecks, todayISO, WINDOW_DAYS) * 7 * split.goals;
+  // Used for the weeks, exactly: pay x 7 / days x Goals % / 100.
+  const exactWeekly = income.cents * 7 * split.goals;
   const projections = goalProjections({
-    goalsBalanceCents, goals: state.goals, weeklyCents: exactWeekly, per: WINDOW_DAYS * 100,
+    goalsBalanceCents, goals: state.goals, weeklyCents: exactWeekly, per: income.days * 100,
   });
   const assigned = projections.reduce((sum, p) => sum + p.savedCents, 0);
   return {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayNumber, isISODate, localISODate, weeksToGoal, averageWeeklyIncome } from '../src/budget.js';
+import { dayNumber, isISODate, localISODate, weeksToGoal, averageWeeklyIncome, addDays } from '../src/budget.js';
 
 test('localISODate writes the local calendar day as YYYY-MM-DD', () => {
   assert.equal(localISODate(new Date(2026, 10, 7, 23, 59)), '2026-11-07'); // late evening stays the same day
@@ -53,4 +53,14 @@ test('averageWeeklyIncome honours a custom window', () => {
     { date: '2026-10-31', cents: 9999 },
   ];
   assert.equal(averageWeeklyIncome(paychecks, '2026-11-07', 7), 7000);
+});
+
+// Ticket 012: "around <date>"
+
+test('addDays moves a date by whole days across months, years and leap days', () => {
+  assert.equal(addDays('2026-11-07', 7), '2026-11-14');
+  assert.equal(addDays('2026-12-28', 7), '2027-01-04');
+  assert.equal(addDays('2028-02-28', 1), '2028-02-29');
+  assert.equal(addDays('2026-11-07', -7), '2026-10-31');
+  assert.throws(() => addDays('2026-11-07', 1.5), RangeError);
 });
