@@ -13,6 +13,19 @@ git init && git add -A && git commit -m "Scaffold"
 claude                # then paste the contents of PROMPT.md
 ```
 
+## Browser tests
+
+`./check.sh` also runs the Playwright tests in `e2e/` once they are installed:
+
+```
+npm install
+npm run setup:browsers   # downloads Chromium into .playwright-browsers/
+```
+
+npm's cache (`.npm-cache/`), the browsers, and Playwright's temporary files
+(`.playwright-tmp/`) all stay inside this folder and are gitignored. The test server
+listens on 127.0.0.1 only. `e2e/teen-flow.spec.js` is the whole teen flow in one test.
+
 ## Why it is laid out this way
 
 - **SPEC.md** is the use case in Markdown, with open questions Claude Code asks you

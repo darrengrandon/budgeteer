@@ -2,7 +2,7 @@
 id: 008
 title: Playwright end-to-end flow
 depends_on: [007]
-status: todo
+status: done
 ---
 
 ## Goal
