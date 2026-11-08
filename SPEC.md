@@ -73,6 +73,8 @@ A bottom sheet with the amount only (date is today) on the numeric keypad, and a
 - The same amount as a paycheck already logged today asks first: "You already logged
   $212.40 today. Log another paycheck?" with "No, it's already logged" (where "Add paycheck"
   was) and "Yes, log another". The second tap of a double tap never saves, confirms or undoes.
+- Any paycheck over **$3,000** asks first, even the first one: "That's over $3,000. Is
+  $3,500.00 right?", and the button becomes "Yes, add $3,500.00".
 - An amount 4 times the last paycheck or more asks first: "That's a lot more than last
   time ($312.47). Is $31,247.00 right?", and the button becomes "Yes, add $31,247.00".
 After saving, the sheet shows where the money went ("Your $42.50 became $21.25 to spend,

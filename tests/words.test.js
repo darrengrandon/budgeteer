@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, spendAvailable,
   spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence, payBasis, leftToSpend,
-  lastPaycheckNote, bigAmountWarning, missedChip,
+  lastPaycheckNote, bigAmountWarning, missedChip, overLimitWarning,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -171,4 +171,13 @@ test('L5: bigAmountWarning asks about an amount 4 times the last paycheck or mor
 test('L2: missedChip offers to add the skipped paydays', () => {
   assert.equal(missedChip(['2026-11-21'], '2026-12-05'), 'Also add the paycheck I missed (around Nov 21)');
   assert.equal(missedChip(['2026-11-21', '2026-12-05'], '2026-12-19'), 'Also add the 2 paychecks I missed (around Nov 21 and Dec 5)');
+});
+
+// Overnight Phase 1, decision 3: any paycheck over $3,000 asks first (SPEC.md).
+
+test('overLimitWarning asks about any paycheck over $3,000', () => {
+  assert.equal(overLimitWarning(300001), "That's over $3,000. Is $3,000.01 right?");
+  assert.equal(overLimitWarning(100000000), "That's over $3,000. Is $1,000,000.00 right?");
+  assert.equal(overLimitWarning(300000), '');
+  assert.equal(overLimitWarning(21240), '');
 });

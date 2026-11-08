@@ -200,6 +200,20 @@ export function bigAmountWarning(cents, lastCents) {
   return `That's a lot more than last time (${formatCents(lastCents)}). Is ${formatCents(cents)} right?`;
 }
 
+/** Paychecks over this ask "Is that right?" before saving (SPEC.md, $3,000). */
+export const PAYCHECK_CHECK_CENTS = 300_000;
+
+/**
+ * A question before saving any paycheck over $3,000, even the first (SPEC.md decision 13).
+ * Empty at $3,000 or less.
+ * @param {number} cents
+ * @returns {string}
+ */
+export function overLimitWarning(cents) {
+  if (cents <= PAYCHECK_CHECK_CENTS) return '';
+  return `That's over ${moneyShort(PAYCHECK_CHECK_CENTS)}. Is ${formatCents(cents)} right?`;
+}
+
 /**
  * The chip that adds paydays the teen skipped (REVIEW.md L2).
  * @param {string[]} dates

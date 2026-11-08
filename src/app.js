@@ -50,6 +50,7 @@ import {
   shortDateFrom,
   lastPaycheckNote,
   bigAmountWarning,
+  overLimitWarning,
   missedChip,
 } from './words.js';
 import { readAmount, readSplitInputs, toPercent } from './forms.js';
@@ -442,7 +443,7 @@ el('pay-form').addEventListener('submit', (event) => {
     return;
   }
   const last = state.paychecks[state.paychecks.length - 1];
-  const warning = bigAmountWarning(amount.cents, last ? last.cents : null);
+  const warning = bigAmountWarning(amount.cents, last ? last.cents : null) || overLimitWarning(amount.cents);
   if (warning !== '' && confirmedCents !== amount.cents) {
     showError('pay-amount-error', warning, payAmount);
     confirmedCents = amount.cents;

@@ -175,6 +175,7 @@ test('fits the phone: no sideways scroll, big targets, "I got paid" in the thumb
   expect(await smallTargets(page)).toEqual([]);
   await page.locator('#pay-sheet').getByLabel('Take-home amount').fill('1000000');
   await page.getByRole('button', { name: 'Add paycheck' }).click();
+  await page.getByRole('button', { name: 'Yes, add $1,000,000.00' }).click(); // overnight decision 3: over $3,000 asks first
   expect(await noSideScroll(page)).toBe(true);
   await page.getByRole('button', { name: 'Done' }).click();
   expect(await noSideScroll(page)).toBe(true);

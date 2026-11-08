@@ -71,3 +71,24 @@ test('decision 2: a double tap with a repeat amount still logs nothing extra', a
   await page.waitForTimeout(300);
   expect(await historyCount(page)).toBe(1);
 });
+
+test('decision 3: a paycheck over $3,000 asks "Is that right?" before saving, even the first one', async ({ page }) => {
+  await open(page);
+  await welcome(page);
+  const sheet = page.locator('#pay-sheet');
+  await sheet.getByLabel('Take-home amount').fill('3500');
+  await sheet.getByRole('button', { name: 'Add paycheck' }).click();
+  await expect(sheet.getByRole('alert')).toHaveText("That's over $3,000. Is $3,500.00 right?");
+  expect(await historyCount(page)).toBe(0);
+  await sheet.getByRole('button', { name: 'Yes, add $3,500.00' }).click();
+  await expect(sheet.getByText(/^Nice\. Your \$3,500\.00/)).toBeVisible();
+  expect(await historyCount(page)).toBe(1);
+});
+
+test('decision 3: exactly $3,000 does not ask', async ({ page }) => {
+  await open(page);
+  await welcome(page);
+  await page.locator('#pay-sheet').getByLabel('Take-home amount').fill('3000');
+  await page.getByRole('button', { name: 'Add paycheck' }).click();
+  await expect(page.getByText(/^Nice\. Your \$3,000\.00/)).toBeVisible();
+});
