@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { paycheckSentence, splitTotalHint } from '../src/words.js';
+import { paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
   assert.equal(
@@ -31,4 +31,22 @@ test('splitTotalHint asks for whole numbers when a box is empty or not a whole n
   assert.equal(splitTotalHint({ spend: Number.NaN, save: 30, goals: 20 }), hint);
   assert.equal(splitTotalHint({ spend: 50.5, save: 29.5, goals: 20 }), hint);
   assert.equal(splitTotalHint({ spend: -10, save: 90, goals: 20 }), hint);
+});
+
+// Purchases (ticket 004)
+
+test('overspendMessage says how much is available', () => {
+  assert.equal(overspendMessage(1240), "That's more than you have. You have $12.40 left to spend.");
+  assert.equal(overspendMessage(0), 'Your Spend bucket is empty right now. Log a paycheck to fill it up.');
+});
+
+test('purchaseSentence says what came out and what is left', () => {
+  assert.equal(purchaseSentence(500, 1625), 'Logged. $5.00 came out of Spend. You have $16.25 left to spend.');
+  assert.equal(purchaseSentence(500, 0), 'Logged. $5.00 came out of Spend. Your Spend bucket is now empty.');
+});
+
+test('shortDate shows a date like "Nov 7, 2026" without time-zone surprises', () => {
+  assert.equal(shortDate('2026-11-07'), 'Nov 7, 2026');
+  assert.equal(shortDate('2026-01-01'), 'Jan 1, 2026');
+  assert.equal(shortDate('2025-12-31'), 'Dec 31, 2025');
 });

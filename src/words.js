@@ -29,3 +29,36 @@ export function splitTotalHint(split) {
   if (total > 100) return `Adds up to ${total}%. Take away ${total - 100}.`;
   return `Adds up to ${total}%. Add ${100 - total} more.`;
 }
+
+/**
+ * Shown when a purchase is more than what is in Spend (SPEC.md Decisions 3).
+ * @param {number} availableCents
+ * @returns {string}
+ */
+export function overspendMessage(availableCents) {
+  if (availableCents <= 0) return 'Your Spend bucket is empty right now. Log a paycheck to fill it up.';
+  return `That's more than you have. You have ${formatCents(availableCents)} left to spend.`;
+}
+
+/**
+ * "Logged. $5.00 came out of Spend. You have $16.25 left to spend."
+ * @param {number} cents the purchase
+ * @param {number} leftCents what is left in Spend afterwards
+ * @returns {string}
+ */
+export function purchaseSentence(cents, leftCents) {
+  const left = leftCents > 0 ? `You have ${formatCents(leftCents)} left to spend.` : 'Your Spend bucket is now empty.';
+  return `Logged. ${formatCents(cents)} came out of Spend. ${left}`;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * "Nov 7, 2026" from "2026-11-07". Reads the parts directly, so the time zone can't shift the day.
+ * @param {string} iso
+ * @returns {string}
+ */
+export function shortDate(iso) {
+  const [year, month, day] = iso.split('-').map(Number);
+  return `${MONTHS[month - 1]} ${day}, ${year}`;
+}

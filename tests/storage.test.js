@@ -13,6 +13,10 @@ import {
   saveState,
   exportBackup,
   importBackup,
+  removePaycheck,
+  removePurchase,
+  OverspendError,
+  recentActivity,
 } from '../src/storage.js';
 
 /** A fake localStorage that keeps items in a Map. */
@@ -266,4 +270,122 @@ test('importBackup builds fresh objects in a fixed key order', () => {
   const result = importBackup(JSON.stringify(data));
   assert.equal(result.ok, true);
   assert.deepEqual(Object.keys(result.state.split), ['spend', 'save', 'goals']);
+});
+
+// Purchases and overspending (ticket 004)
+
+test('a purchase can use up Spend exactly, down to zero', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 1000 }); // spend 500
+  state = addPurchase(state, { date: '2026-11-07', cents: 500, note: 'Shoes' });
+  assert.equal(balances(state).spend, 0);
+  assert.deepEqual(balances(state), { spend: 0, save: 300, goals: 200 });
+});
+
+test('a purchase one cent over what is in Spend is blocked and changes nothing', () => {
+  const state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 1000 }); // spend 500
+  const snapshot = structuredClone(state);
+  assert.throws(
+    () => addPurchase(state, { date: '2026-11-07', cents: 501, note: 'Shoes' }),
+    (error) => error instanceof OverspendError && error instanceof RangeError && error.availableCents === 500,
+  );
+  assert.deepEqual(state, snapshot);
+});
+
+test('with nothing in Spend, every purchase is blocked', () => {
+  assert.throws(
+    () => addPurchase(emptyState(), { date: '2026-11-07', cents: 1, note: '' }),
+    (error) => error instanceof OverspendError && error.availableCents === 0,
+  );
+});
+
+test('earlier purchases count against what is left', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 1000 }); // spend 500
+  state = addPurchase(state, { date: '2026-11-07', cents: 300, note: 'Lunch' });
+  assert.throws(
+    () => addPurchase(state, { date: '2026-11-07', cents: 201, note: 'Snacks' }),
+    (error) => error instanceof OverspendError && error.availableCents === 200,
+  );
+  state = addPurchase(state, { date: '2026-11-07', cents: 200, note: 'Snacks' });
+  assert.equal(balances(state).spend, 0);
+});
+
+test('a purchase note is trimmed and stored as plain text', () => {
+  const state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 1000 });
+  const next = addPurchase(state, { date: '2026-11-07', cents: 100, note: '  <b>Pizza</b>  ' });
+  assert.equal(next.purchases[0].note, '<b>Pizza</b>');
+});
+
+// Removing records to fix mistakes
+
+test('removePurchase puts the money back in Spend', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 1000 });
+  state = addPurchase(state, { date: '2026-11-07', cents: 300, note: 'Lunch' });
+  state = removePurchase(state, state.purchases[0].id);
+  assert.equal(state.purchases.length, 0);
+  assert.equal(balances(state).spend, 500);
+});
+
+test('removePaycheck takes its money back out of every bucket', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-01', cents: 1000 });
+  state = addPaycheck(state, { date: '2026-11-07', cents: 425000 }); // oops, meant 42.50
+  state = removePaycheck(state, state.paychecks[1].id);
+  assert.deepEqual(balances(state), { spend: 500, save: 300, goals: 200 });
+});
+
+test('removePaycheck is blocked if it would leave Spend below zero', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-01', cents: 1000 }); // spend 500
+  state = addPaycheck(state, { date: '2026-11-07', cents: 1000 }); // spend 1000
+  state = addPurchase(state, { date: '2026-11-07', cents: 600, note: 'Game' });
+  const snapshot = structuredClone(state);
+  assert.throws(() => removePaycheck(state, state.paychecks[1].id), (error) => error instanceof OverspendError);
+  assert.deepEqual(state, snapshot);
+});
+
+test('removing an id that does not exist is an error', () => {
+  assert.throws(() => removePaycheck(emptyState(), 'p9'), RangeError);
+  assert.throws(() => removePurchase(emptyState(), 'b9'), RangeError);
+});
+
+test('ids stay unique after the newest record is removed and another is added', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 1000 });
+  state = addPaycheck(state, { date: '2026-11-07', cents: 1000 });
+  const removedId = state.paychecks[1].id;
+  state = removePaycheck(state, removedId);
+  state = addPaycheck(state, { date: '2026-11-07', cents: 1000 });
+  assert.equal(state.paychecks.length, 2);
+  assert.equal(new Set(state.paychecks.map((p) => p.id)).size, 2);
+});
+
+// Recent activity list
+
+test('recentActivity lists paychecks and purchases, newest date first', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-01', cents: 10000 });
+  state = addPaycheck(state, { date: '2026-11-07', cents: 2000 });
+  state = addPurchase(state, { date: '2026-11-03', cents: 500, note: 'Movie' });
+  state = addPurchase(state, { date: '2026-11-07', cents: 300, note: 'Snack' });
+  state = addPurchase(state, { date: '2026-11-07', cents: 200, note: 'Drink' });
+  const { items, total } = recentActivity(state, 20);
+  assert.equal(total, 5);
+  assert.deepEqual(items.map((i) => [i.kind, i.date, i.cents]), [
+    ['purchase', '2026-11-07', 200], // same day: purchases first, latest logged first
+    ['purchase', '2026-11-07', 300],
+    ['paycheck', '2026-11-07', 2000],
+    ['purchase', '2026-11-03', 500],
+    ['paycheck', '2026-11-01', 10000],
+  ]);
+  assert.equal(items[0].note, 'Drink');
+});
+
+test('recentActivity stops at the limit but reports the full count', () => {
+  let state = emptyState();
+  for (let day = 1; day <= 9; day++) state = addPaycheck(state, { date: `2026-11-0${day}`, cents: 100 });
+  const { items, total } = recentActivity(state, 3);
+  assert.equal(total, 9);
+  assert.deepEqual(items.map((i) => i.date), ['2026-11-09', '2026-11-08', '2026-11-07']);
+});
+
+test('recentActivity orders ids by number, so p10 comes after p9', () => {
+  let state = emptyState();
+  for (let i = 0; i < 10; i++) state = addPaycheck(state, { date: '2026-11-07', cents: 100 + i });
+  assert.deepEqual(recentActivity(state, 2).items.map((i) => i.cents), [109, 108]);
 });

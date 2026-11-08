@@ -2,7 +2,7 @@
 id: 004
 title: Log a purchase from Spend
 depends_on: [003]
-status: todo
+status: done
 ---
 
 ## Goal

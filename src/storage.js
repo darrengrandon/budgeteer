@@ -308,7 +308,20 @@ export function addPaycheck(state, { date, cents }) {
 }
 
 /**
- * Log a purchase, which comes out of Spend.
+ * Thrown when a change would leave the Spend bucket below zero (SPEC.md Decisions 3).
+ * availableCents is what is in Spend right now.
+ */
+export class OverspendError extends RangeError {
+  /** @param {number} availableCents */
+  constructor(availableCents) {
+    super(`Only ${availableCents} cents are available to spend.`);
+    this.name = 'OverspendError';
+    this.availableCents = availableCents;
+  }
+}
+
+/**
+ * Log a purchase, which comes out of Spend. Throws an OverspendError if Spend can't cover it.
  * @param {State} state
  * @param {{ date: string, cents: number, note: string }} purchase
  * @returns {State}
@@ -320,7 +333,34 @@ export function addPurchase(state, { date, cents, note }) {
     cents: readCents(cents, 'The amount'),
     note: readText(note, 'The note', LIMITS.maxNoteLength).trim(),
   };
+  const available = balances(state).spend;
+  if (record.cents > available) throw new OverspendError(available);
   return { ...state, purchases: [...state.purchases, record] };
+}
+
+/**
+ * Remove a purchase logged by mistake. Its money goes back into Spend.
+ * @param {State} state
+ * @param {string} id
+ * @returns {State}
+ */
+export function removePurchase(state, id) {
+  if (!state.purchases.some((b) => b.id === id)) throw new RangeError(`No purchase with id ${id}`);
+  return { ...state, purchases: state.purchases.filter((b) => b.id !== id) };
+}
+
+/**
+ * Remove a paycheck logged by mistake. Throws an OverspendError if part of it was already
+ * spent, so Spend would drop below zero.
+ * @param {State} state
+ * @param {string} id
+ * @returns {State}
+ */
+export function removePaycheck(state, id) {
+  if (!state.paychecks.some((p) => p.id === id)) throw new RangeError(`No paycheck with id ${id}`);
+  const next = { ...state, paychecks: state.paychecks.filter((p) => p.id !== id) };
+  if (balances(next).spend < 0) throw new OverspendError(balances(state).spend);
+  return next;
 }
 
 /**
@@ -331,6 +371,31 @@ export function addPurchase(state, { date, cents, note }) {
  */
 export function setSplit(state, split) {
   return { ...state, split: readSplit({ ...split }, 'The split') };
+}
+
+/**
+ * @typedef {{ kind: 'paycheck', id: string, date: string, cents: number }
+ *   | { kind: 'purchase', id: string, date: string, cents: number, note: string }} ActivityItem
+ */
+
+/**
+ * Paychecks and purchases together, newest date first. On the same day, purchases come
+ * before paychecks (they usually happen after payday), and later-logged records come first.
+ * @param {State} state
+ * @param {number} limit
+ * @returns {{ items: ActivityItem[], total: number }}
+ */
+export function recentActivity(state, limit) {
+  /** @type {ActivityItem[]} */
+  const all = [
+    ...state.paychecks.map((p) => ({ kind: /** @type {const} */ ('paycheck'), id: p.id, date: p.date, cents: p.cents })),
+    ...state.purchases.map((b) => ({ kind: /** @type {const} */ ('purchase'), id: b.id, date: b.date, cents: b.cents, note: b.note })),
+  ];
+  const kindOrder = { purchase: 0, paycheck: 1 };
+  all.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)
+    || kindOrder[a.kind] - kindOrder[b.kind]
+    || Number(b.id.slice(1)) - Number(a.id.slice(1)));
+  return { items: all.slice(0, limit), total: all.length };
 }
 
 // ---------------------------------------------------------------------------
