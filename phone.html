@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <!-- No network: scripts, styles, the manifest and the service worker come only from this folder. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; manifest-src 'self'; worker-src 'self'; form-action 'none'; base-uri 'none'">
+  <title>Budgeteer</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="phone.css">
+  <script type="module" src="src/phone.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="app-bar">
+      <h1>Budgeteer</h1>
+    </header>
+
+    <p id="notice" class="notice" role="status" hidden></p>
+    <noscript><p class="notice">Budgeteer needs JavaScript turned on to work.</p></noscript>
+
+    <!-- First run: no setup, just what they're saving for (or skip). -->
+    <section id="welcome" class="welcome" aria-labelledby="welcome-title" hidden>
+      <h2 id="welcome-title">What are you saving for?</h2>
+      <p class="muted">Pick one thing. Budgeteer will tell you when you can buy it.</p>
+      <form id="welcome-form" novalidate>
+        <div class="field">
+          <label for="welcome-name">What is it?</label>
+          <input id="welcome-name" type="text" maxlength="40" autocomplete="off" enterkeyhint="next"
+                 aria-describedby="welcome-name-error">
+          <p id="welcome-name-error" class="error" role="alert"></p>
+        </div>
+        <div class="field">
+          <label for="welcome-price">How much does it cost?</label>
+          <div class="money-input">
+            <span aria-hidden="true">$</span>
+            <input id="welcome-price" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done"
+                   aria-describedby="welcome-price-error">
+          </div>
+          <p id="welcome-price-error" class="error" role="alert"></p>
+        </div>
+        <button type="submit" class="primary big">Next</button>
+      </form>
+      <div class="row-center">
+        <button type="button" id="welcome-skip" class="link">Skip for now</button>
+      </div>
+    </section>
+
+    <!-- Home: one screen. -->
+    <main id="home" hidden>
+      <button type="button" id="nudge" class="nudge" hidden>Got paid? Log it.</button>
+      <section class="headline-card" aria-label="What to spend">
+        <p id="headline" class="headline"></p>
+        <p id="basis" class="muted basis"></p>
+        <p id="home-status" class="result" role="status"></p>
+      </section>
+      <section aria-label="Your goals">
+        <ol id="goal-cards" class="goal-cards"></ol>
+      </section>
+    </main>
+  </div>
+
+  <div id="paybar" class="paybar" hidden>
+    <button type="button" id="got-paid" class="primary big">I got paid</button>
+  </div>
+
+  <!-- The paycheck sheet. -->
+  <dialog id="pay-sheet" class="sheet" aria-labelledby="pay-title">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="pay-title">How much did you get paid?</h2>
+    <form id="pay-form" novalidate>
+      <div id="pay-entry">
+        <div class="field">
+          <label for="pay-amount">Take-home amount</label>
+          <div class="money-input big-amount">
+            <span aria-hidden="true">$</span>
+            <input id="pay-amount" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done"
+                   aria-describedby="pay-amount-help pay-amount-error">
+          </div>
+          <small id="pay-amount-help" class="muted">What you actually got, after taxes.</small>
+          <p id="pay-amount-error" class="error" role="alert"></p>
+        </div>
+        <div class="chips">
+          <button type="button" id="pay-same" class="chip" hidden></button>
+        </div>
+        <button type="submit" class="primary big">Add paycheck</button>
+        <div class="row-center">
+          <button type="button" id="pay-cancel" class="link">Cancel</button>
+        </div>
+      </div>
+    </form>
+    <div id="pay-done" hidden>
+      <p id="pay-sentence" class="pay-sentence"></p>
+      <ul id="pay-timeline" class="timeline"></ul>
+      <p id="pay-undo-error" class="error" role="alert"></p>
+      <button type="button" id="pay-close" class="primary big">Done</button>
+      <div class="row-center">
+        <button type="button" id="pay-undo" class="link">Undo</button>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>

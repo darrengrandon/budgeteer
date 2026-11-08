@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine, whatIfWeekly, spendAvailable,
-  spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence,
+  spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence, payBasis,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -193,4 +193,9 @@ test('goalTimeline is the line under "where your money went"', () => {
 
 test('buySentence says what came out of Goals', () => {
   assert.equal(buySentence(8500, 'Concert tickets'), 'Nice! $85.00 came out of Goals for Concert tickets.');
+});
+
+test('payBasis says what the headline is based on', () => {
+  assert.equal(payBasis(10000), 'Out of about $100 a week of pay.');
+  assert.equal(payBasis(850), 'Out of about $8.50 a week of pay.');
 });

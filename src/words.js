@@ -190,10 +190,25 @@ export function moneyShort(cents) {
  */
 export function spendHeadline(weeklySpendCents) {
   if (weeklySpendCents === null) return 'Log your first paycheck';
-  const amount = weeklySpendCents < 1000 && weeklySpendCents % 100 !== 0
-    ? formatCents(weeklySpendCents)
-    : `$${withCommas(Math.round(weeklySpendCents / 100))}`;
-  return `Spend about ${amount} a week`;
+  return `Spend about ${aboutAmount(weeklySpendCents)} a week`;
+}
+
+/**
+ * The line under the headline: "Out of about $100 a week of pay."
+ * @param {number} weeklyPayCents
+ * @returns {string}
+ */
+export function payBasis(weeklyPayCents) {
+  return `Out of about ${aboutAmount(weeklyPayCents)} a week of pay.`;
+}
+
+/**
+ * An "about" amount: whole dollars, except under $10 where the cents matter.
+ * @param {number} cents
+ * @returns {string}
+ */
+function aboutAmount(cents) {
+  return cents < 1000 && cents % 100 !== 0 ? formatCents(cents) : `$${withCommas(Math.round(cents / 100))}`;
 }
 
 /**

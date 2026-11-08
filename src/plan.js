@@ -1,0 +1,50 @@
+// What Home shows, worked out from the records. Pure, so it is tested without a browser.
+
+import { weeklyPay, weeklySpendCents, gotPaidDue } from './pay.js';
+import { projectGoals } from './goals.js';
+import { spendHeadline, payBasis, goalAmounts, readyLine } from './words.js';
+
+/** @typedef {import('./storage.js').State} State */
+/** @typedef {import('./storage.js').Split} Split */
+
+/**
+ * @typedef {object} GoalCard
+ * @property {string} id
+ * @property {string} name
+ * @property {number} targetCents
+ * @property {number} savedCents
+ * @property {number} weeks
+ * @property {boolean} funded the whole price is covered: "Buy it" can be offered
+ * @property {string} amounts "$40 of $300"
+ * @property {string} line "Ready in about 9 weeks (around Jan 9)" or "You can buy it!"
+ */
+
+/**
+ * Everything on Home, top to bottom (SPEC.md "Home").
+ * Pass a trial split to preview what a different split would do; nothing is saved.
+ * @param {State} state
+ * @param {string} todayISO
+ * @param {Split} [split]
+ * @returns {{ headline: string, basis: string, nudge: boolean, goals: GoalCard[] }}
+ */
+export function homePlan(state, todayISO, split = state.split) {
+  const pay = weeklyPay(state.paychecks, todayISO);
+  const projection = projectGoals(state, todayISO, split, pay);
+  return {
+    headline: spendHeadline(weeklySpendCents(pay, split.spend)),
+    basis: pay ? payBasis(Math.round((pay.cents * 7) / pay.days)) : '',
+    nudge: gotPaidDue(state.paychecks, todayISO),
+    goals: projection.goals.map(({ goal, savedCents, weeks }) => ({
+      id: goal.id,
+      name: goal.name,
+      targetCents: goal.targetCents,
+      savedCents,
+      weeks,
+      funded: savedCents >= goal.targetCents,
+      amounts: goalAmounts(savedCents, goal.targetCents),
+      line: readyLine({
+        savedCents, targetCents: goal.targetCents, weeks, hasPay: pay !== null, goalsPercent: split.goals, todayISO,
+      }),
+    })),
+  };
+}

@@ -2,7 +2,7 @@
 id: 015
 title: Phone shell, first run, Home and the paycheck sheet
 depends_on: [014]
-status: todo
+status: done
 ---
 
 ## Goal
