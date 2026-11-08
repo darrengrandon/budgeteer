@@ -910,6 +910,44 @@ function render() {
   el('goal-cards').replaceChildren(...plan.goals.map((goal, i) => goalCard(goal, i === 0)));
   el('goals-empty').hidden = plan.goals.length > 0;
   renderSpending();
+  el('install-card').hidden = !installHelpWanted();
+}
+
+// ---------------------------------------------------------------------------
+// Installing (docs/adr/0001): the iPhone help card, and the service worker for offline use.
+
+const INSTALL_HELP_KEY = 'budgeteer.installHelp';
+let installHelpDismissed = false;
+
+/** iPhone Safari, not yet installed, and not dismissed. */
+function installHelpWanted() {
+  if (installHelpDismissed) return false;
+  const iPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const nav = /** @type {Navigator & { standalone?: boolean }} */ (navigator);
+  const installed = nav.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  try {
+    if (storage?.getItem(INSTALL_HELP_KEY) === 'dismissed') return false;
+  } catch {
+    // Storage is off; the card can still be dismissed for this visit.
+  }
+  return iPhone && !installed;
+}
+
+el('install-dismiss').addEventListener('click', () => {
+  installHelpDismissed = true;
+  try {
+    storage?.setItem(INSTALL_HELP_KEY, 'dismissed');
+  } catch {
+    // Storage is off; it stays hidden for this visit.
+  }
+  el('install-card').hidden = true;
+  el('headline').focus();
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {
+    // Offline support is a bonus; the app works the same without it.
+  });
 }
 
 render();

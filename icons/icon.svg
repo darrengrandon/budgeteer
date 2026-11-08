@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Budgeteer icon: three bars (Spend, Save, Goals) and a coin. Everything sits inside the
+       central circle that maskable icons keep (radius 40%), so it can be cropped safely. -->
+  <rect width="512" height="512" fill="#3d4bd6"/>
+  <rect x="136" y="256" width="64" height="120" rx="20" fill="#ffffff" fill-opacity="0.7"/>
+  <rect x="224" y="206" width="64" height="170" rx="20" fill="#ffffff" fill-opacity="0.85"/>
+  <rect x="312" y="156" width="64" height="220" rx="20" fill="#ffffff"/>
+  <circle cx="344" cy="112" r="26" fill="#ffd166"/>
+</svg>

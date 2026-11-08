@@ -762,3 +762,9 @@ dialog.sheet.full {
     transition: none;
   }
 }
+
+/* "Add to Home Screen" help (iPhone) */
+
+.install h2 {
+  font-size: 1.1rem;
+}

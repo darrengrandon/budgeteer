@@ -25,6 +25,7 @@ claude                # then paste the contents of PROMPT.md
 ```
 npm install
 npm run setup:browsers   # downloads Chromium into .playwright-browsers/
+npm run icons            # only after changing icons/icon.svg: remakes the PNG icons
 ```
 
 npm's cache (`.npm-cache/`), the browsers, and Playwright's temporary files
