@@ -1,10 +1,11 @@
 // Goals: how Goals-bucket money is shared out, and how many weeks until each goal.
 // Pure functions. All money is integer cents.
 
-import { weeksToGoal, incomeInWindow } from './budget.js';
+import { weeksToGoal, incomeInWindow, isISODate } from './budget.js';
+import { balances, nextId, LIMITS } from './storage.js';
 
+/** The old 28-day window, used only when no weekly pay is given. */
 const WINDOW_DAYS = 28;
-import { balances } from './storage.js';
 
 /** @typedef {import('./storage.js').State} State */
 /** @typedef {import('./storage.js').Goal} Goal */
@@ -121,5 +122,35 @@ export function whatIf(state, todayISO, goalsPercent) {
     split,
     trial: projectGoals(state, todayISO, split),
     current: projectGoals(state, todayISO),
+  };
+}
+
+/**
+ * Buy it (SPEC.md decisions 7 and 8): record that a fully saved goal was bought.
+ * The real price comes out of Goals, but never more than the goal's price; if it cost less,
+ * the rest stays in Goals for the next goal. The goal is removed and a goal purchase kept.
+ * @param {State} state a version 2 state
+ * @param {string} goalId
+ * @param {{ cents: number, date: string }} purchase the real price and the day
+ * @returns {State}
+ */
+export function buyGoal(state, goalId, { cents, date }) {
+  if (state.version !== 2 || !state.goalPurchases) throw new RangeError('Upgrade the state to version 2 first.');
+  const index = state.goals.findIndex((g) => g.id === goalId);
+  if (index === -1) throw new RangeError(`No goal with id ${goalId}`);
+  const goal = state.goals[index];
+  if (!Number.isInteger(cents) || cents < 1 || cents > LIMITS.maxCents) {
+    throw new RangeError('The price must be more than $0, in whole cents.');
+  }
+  if (!isISODate(date)) throw new RangeError('The date must be a real date.');
+  const saved = allocateToGoals(balances(state).goals, state.goals)[index];
+  if (saved < goal.targetCents) throw new RangeError(`"${goal.name}" isn't fully saved yet.`);
+  if (state.goalPurchases.length >= LIMITS.maxRecords) throw new RangeError('You have too many goal buys logged.');
+
+  const record = { id: nextId('x', state.goalPurchases), date, cents: Math.min(cents, goal.targetCents), name: goal.name };
+  return {
+    ...state,
+    goals: state.goals.filter((g) => g.id !== goalId),
+    goalPurchases: [...state.goalPurchases, record],
   };
 }

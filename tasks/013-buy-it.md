@@ -2,7 +2,7 @@
 id: 013
 title: Buy it (logic)
 depends_on: [011, 012]
-status: todo
+status: done
 ---
 
 ## Goal

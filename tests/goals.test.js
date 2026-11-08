@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { allocateToGoals, goalProjections, weeklyGoalsCents, projectGoals, trialSplit, whatIf } from '../src/goals.js';
-import { emptyState, addPaycheck, addGoal } from '../src/storage.js';
+import {
+  allocateToGoals, goalProjections, weeklyGoalsCents, projectGoals, trialSplit, whatIf, buyGoal,
+} from '../src/goals.js';
+import {
+  emptyState, newState, addPaycheck, addGoal, balances, removeGoalPurchase, exportBackup, importBackup,
+} from '../src/storage.js';
 
 const phone = { id: 'g1', name: 'Phone', targetCents: 10000 };
 const tickets = { id: 'g2', name: 'Concert', targetCents: 10000 };
@@ -191,4 +195,71 @@ test('projectGoals with no weekly pay (null) gives Infinity weeks', () => {
   const result = projectGoals(state, '2026-11-07', state.split, null);
   assert.equal(result.averageWeeklyCents, 0);
   assert.equal(result.goals[0].weeks, Infinity);
+});
+
+// Ticket 013: Buy it (SPEC.md "Buy it", decisions 7 and 8)
+
+/** Goals bucket $40: Tickets ($30) is funded, Phone ($300) has $10. */
+function twoGoals() {
+  let state = addPaycheck(newState(), { date: '2026-11-07', cents: 20000 }); // $40 to Goals
+  state = addGoal(state, { name: 'Tickets', targetCents: 3000 });
+  return addGoal(state, { name: 'Phone', targetCents: 30000 });
+}
+
+test('Buy it takes the price out of Goals, removes the goal and records the buy', () => {
+  const before = twoGoals();
+  const after = buyGoal(before, before.goals[0].id, { cents: 3000, date: '2026-11-07' });
+  assert.deepEqual(after.goals.map((g) => g.name), ['Phone']);
+  assert.deepEqual(after.goalPurchases, [{ id: 'x1', date: '2026-11-07', cents: 3000, name: 'Tickets' }]);
+  assert.equal(balances(after).goals, 1000);
+  assert.equal(importBackup(exportBackup(after)).ok, true);
+});
+
+test('Buy it at a lower price leaves the rest in Goals for the next goal', () => {
+  const before = twoGoals();
+  const after = buyGoal(before, before.goals[0].id, { cents: 2500, date: '2026-11-07' });
+  assert.equal(after.goalPurchases[0].cents, 2500);
+  assert.equal(balances(after).goals, 1500);
+  assert.deepEqual(allocateToGoals(balances(after).goals, after.goals), [1500]); // Phone got the $5
+});
+
+test('Buy it at a higher price takes only the goal price out of Goals', () => {
+  const before = twoGoals();
+  const after = buyGoal(before, before.goals[0].id, { cents: 4500, date: '2026-11-07' });
+  assert.equal(after.goalPurchases[0].cents, 3000);
+  assert.equal(balances(after).goals, 1000);
+});
+
+test('Buy it is refused for a goal that is not fully saved, and nothing changes', () => {
+  const before = twoGoals();
+  const snapshot = structuredClone(before);
+  assert.throws(() => buyGoal(before, before.goals[1].id, { cents: 30000, date: '2026-11-07' }),
+    { name: 'RangeError', message: /isn't fully saved/ });
+  assert.deepEqual(before, snapshot);
+});
+
+test('a lower goal can be bought once it is funded too', () => {
+  let state = addPaycheck(newState(), { date: '2026-11-07', cents: 200000 }); // $400 to Goals
+  state = addGoal(state, { name: 'Tickets', targetCents: 3000 });
+  state = addGoal(state, { name: 'Phone', targetCents: 30000 });
+  const after = buyGoal(state, state.goals[1].id, { cents: 30000, date: '2026-11-07' });
+  assert.deepEqual(after.goals.map((g) => g.name), ['Tickets']);
+  assert.equal(balances(after).goals, 10000);
+});
+
+test('undoing a buy puts the money back', () => {
+  const before = twoGoals();
+  const after = buyGoal(before, before.goals[0].id, { cents: 3000, date: '2026-11-07' });
+  assert.equal(balances(removeGoalPurchase(after, 'x1')).goals, 4000);
+});
+
+test('Buy it rejects a bad price, an unknown goal and a version 1 state', () => {
+  const state = twoGoals();
+  const id = state.goals[0].id;
+  assert.throws(() => buyGoal(state, id, { cents: 0, date: '2026-11-07' }), RangeError);
+  assert.throws(() => buyGoal(state, id, { cents: 12.5, date: '2026-11-07' }), RangeError);
+  assert.throws(() => buyGoal(state, id, { cents: 3000, date: '2026-02-30' }), RangeError);
+  assert.throws(() => buyGoal(state, 'g99', { cents: 3000, date: '2026-11-07' }), RangeError);
+  const v1 = { ...addGoal(addPaycheck(emptyState(), { date: '2026-11-07', cents: 20000 }), { name: 'T', targetCents: 100 }) };
+  assert.throws(() => buyGoal(v1, v1.goals[0].id, { cents: 100, date: '2026-11-07' }), RangeError);
 });
