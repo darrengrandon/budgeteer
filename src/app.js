@@ -49,7 +49,7 @@ import {
   spendAvailable,
   shortDateFrom,
   lastPaycheckNote,
-  bigAmountWarning,
+  bigAmountWarningRecent,
   overLimitWarning,
   missedChip,
 } from './words.js';
@@ -442,8 +442,8 @@ el('pay-form').addEventListener('submit', (event) => {
     showError('pay-amount-error', amount.error, payAmount);
     return;
   }
-  const last = state.paychecks[state.paychecks.length - 1];
-  const warning = bigAmountWarning(amount.cents, last ? last.cents : null) || overLimitWarning(amount.cents);
+  const recent = state.paychecks.slice(-6).map((p) => p.cents);
+  const warning = bigAmountWarningRecent(amount.cents, recent) || overLimitWarning(amount.cents);
   if (warning !== '' && confirmedCents !== amount.cents) {
     showError('pay-amount-error', warning, payAmount);
     confirmedCents = amount.cents;

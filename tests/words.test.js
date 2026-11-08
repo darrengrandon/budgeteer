@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, spendAvailable,
   spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence, payBasis, leftToSpend,
-  lastPaycheckNote, bigAmountWarning, missedChip, overLimitWarning,
+  lastPaycheckNote, bigAmountWarning, missedChip, overLimitWarning, bigAmountWarningRecent,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -180,4 +180,19 @@ test('overLimitWarning asks about any paycheck over $3,000', () => {
   assert.equal(overLimitWarning(100000000), "That's over $3,000. Is $1,000,000.00 right?");
   assert.equal(overLimitWarning(300000), '');
   assert.equal(overLimitWarning(21240), '');
+});
+
+// Overnight fix P3: the "a lot more" question compares with the biggest recent paycheck, so
+// irregular hours ($40 one week, $175 the next) don't trigger it.
+
+test('bigAmountWarningRecent: a normal paycheck after a small week does not ask', () => {
+  assert.equal(bigAmountWarningRecent(17500, [8500, 21000, 4000]), '');
+  assert.equal(bigAmountWarningRecent(83999, [8500, 21000, 4000]), '');
+});
+
+test('bigAmountWarningRecent: 4 times the biggest recent paycheck or more still asks', () => {
+  assert.equal(bigAmountWarningRecent(84000, [8500, 21000, 4000]),
+    "That's a lot more than your recent paychecks (the most was $210.00). Is $840.00 right?");
+  assert.equal(bigAmountWarningRecent(3124700, [31247]), "That's a lot more than last time ($312.47). Is $31,247.00 right?");
+  assert.equal(bigAmountWarningRecent(3124700, []), '');
 });

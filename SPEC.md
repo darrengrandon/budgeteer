@@ -75,8 +75,10 @@ A bottom sheet with the amount only (date is today) on the numeric keypad, and a
   was) and "Yes, log another". The second tap of a double tap never saves, confirms or undoes.
 - Any paycheck over **$3,000** asks first, even the first one: "That's over $3,000. Is
   $3,500.00 right?", and the button becomes "Yes, add $3,500.00".
-- An amount 4 times the last paycheck or more asks first: "That's a lot more than last
-  time ($312.47). Is $31,247.00 right?", and the button becomes "Yes, add $31,247.00".
+- An amount 4 times the biggest of the last 6 paychecks or more asks first: "That's a lot
+  more than last time ($312.47). Is $31,247.00 right?" (or "...than your recent paychecks
+  (the most was $210.00)..."), and the button becomes "Yes, add $31,247.00". Comparing with
+  the biggest, not just the last, keeps normal irregular pay ($40, then $175) from asking.
 After saving, the sheet shows where the money went ("Your $42.50 became $21.25 to spend,
 $12.75 saved, $8.50 for goals.") and the updated timeline for each goal, with "Done" and
 "Undo". After "Done", "Undo paycheck" stays on Home with "Paycheck added." for a while.

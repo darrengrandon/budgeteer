@@ -16,3 +16,12 @@ test('P1: with large text the three split boxes stay in one row, even when a lab
   expect(tops[0]).toBe(tops[1]);
   expect(tops[1]).toBe(tops[2]);
 });
+
+test('P3: irregular hours: a normal $175 after a $40 week is saved without a question', async ({ page }) => {
+  await open(page);
+  await seed(page, v2({ paychecks: [P('p1', '2026-10-24', 21000), P('p2', '2026-10-31', 4000)] }));
+  await page.getByRole('button', { name: 'I got paid' }).click();
+  await page.locator('#pay-sheet').getByLabel('Take-home amount').fill('175');
+  await page.getByRole('button', { name: 'Add paycheck' }).click();
+  await expect(page.getByText(/^Nice\. Your \$175\.00/)).toBeVisible();
+});

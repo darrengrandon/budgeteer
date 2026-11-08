@@ -200,6 +200,21 @@ export function bigAmountWarning(cents, lastCents) {
   return `That's a lot more than last time (${formatCents(lastCents)}). Is ${formatCents(cents)} right?`;
 }
 
+/**
+ * The "a lot more" question, compared with the biggest of the recent paychecks so a normal
+ * paycheck after a short week doesn't trigger it (overnight fix P3). Empty when it looks normal.
+ * @param {number} cents
+ * @param {number[]} recentCents recent paychecks, oldest first (the last one is the newest)
+ * @returns {string}
+ */
+export function bigAmountWarningRecent(cents, recentCents) {
+  if (recentCents.length === 0) return '';
+  const biggest = Math.max(...recentCents);
+  if (cents < biggest * 4) return '';
+  if (biggest === recentCents[recentCents.length - 1]) return bigAmountWarning(cents, biggest);
+  return `That's a lot more than your recent paychecks (the most was ${formatCents(biggest)}). Is ${formatCents(cents)} right?`;
+}
+
 /** Paychecks over this ask "Is that right?" before saving (SPEC.md, $3,000). */
 export const PAYCHECK_CHECK_CENTS = 300_000;
 
