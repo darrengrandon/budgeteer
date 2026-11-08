@@ -76,3 +76,32 @@ export function projectGoals(state, todayISO, split = state.split) {
     goals: state.goals.map((goal, i) => ({ goal, ...projections[i] })),
   };
 }
+
+/**
+ * A trial split for the what-if slider: percent moves between Spend and Goals, Save stays put.
+ * @param {Split} split the real split
+ * @param {number} goalsPercent the trial Goals percent, 0 to spend + goals
+ * @returns {Split}
+ */
+export function trialSplit(split, goalsPercent) {
+  const shared = split.spend + split.goals;
+  if (!Number.isInteger(goalsPercent) || goalsPercent < 0 || goalsPercent > shared) {
+    throw new RangeError(`Goals percent must be a whole number from 0 to ${shared}, got ${goalsPercent}`);
+  }
+  return { spend: shared - goalsPercent, save: split.save, goals: goalsPercent };
+}
+
+/**
+ * Goal projections for a trial Goals percent next to the real ones. Changes nothing.
+ * @param {State} state
+ * @param {string} todayISO
+ * @param {number} goalsPercent
+ */
+export function whatIf(state, todayISO, goalsPercent) {
+  const split = trialSplit(state.split, goalsPercent);
+  return {
+    split,
+    trial: projectGoals(state, todayISO, split),
+    current: projectGoals(state, todayISO),
+  };
+}

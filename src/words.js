@@ -112,3 +112,26 @@ export function unassignedNote(unassignedCents, hasGoals) {
     ? `You have ${amount} in Goals that no goal needs right now. Add a goal to put it to work.`
     : `You have ${amount} in Goals. Add a goal to start filling it.`;
 }
+
+/**
+ * One line per goal under the what-if slider, like "Phone: about 9 weeks (2 weeks sooner)".
+ * @param {{ name: string, done: boolean, trialWeeks: number, currentWeeks: number,
+ *   averageWeeklyCents: number, trialGoalsPercent: number }} args
+ * @returns {string}
+ */
+export function whatIfLine({ name, done, trialWeeks, currentWeeks, averageWeeklyCents, trialGoalsPercent }) {
+  if (done) return `${name}: done already`;
+  if (averageWeeklyCents <= 0) return `${name}: log a paycheck to see a date`;
+  if (trialGoalsPercent === 0) return `${name}: never, with 0% to Goals`;
+  if (!Number.isFinite(trialWeeks)) return `${name}: no date yet`;
+
+  const weeks = (n) => (n === 1 ? '1 week' : `${n} weeks`);
+  let compare = '';
+  if (Number.isFinite(currentWeeks)) {
+    const diff = currentWeeks - trialWeeks;
+    if (diff > 0) compare = ` (${weeks(diff)} sooner)`;
+    else if (diff < 0) compare = ` (${weeks(-diff)} later)`;
+    else compare = ' (same as now)';
+  }
+  return `${name}: about ${weeks(trialWeeks)}${compare}`;
+}

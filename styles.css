@@ -457,3 +457,37 @@ button:disabled {
 button:disabled:hover {
   border-color: var(--border);
 }
+
+/* What if? */
+
+input[type="range"] {
+  width: 100%;
+  min-height: 2.75rem;
+  margin: 0;
+  accent-color: var(--goals);
+  cursor: pointer;
+}
+
+.slider-ends {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.whatif-split {
+  display: block;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.whatif-goals {
+  margin: 0 0 0.9rem;
+  padding-left: 1.2rem;
+}
+
+.whatif-goals li {
+  margin: 0.2rem 0;
+}

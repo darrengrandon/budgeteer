@@ -112,6 +112,29 @@
         </form>
       </section>
 
+      <section class="card" id="whatif" aria-labelledby="whatif-title" hidden>
+        <h2 id="whatif-title">What if?</h2>
+        <p class="hint">Slide to move money between Spend and Goals and see how your goal dates change.
+          Nothing changes until you press "Use this split".</p>
+        <div id="whatif-controls">
+          <div class="field">
+            <label for="whatif-slider">Goals share of each paycheck</label>
+            <input id="whatif-slider" type="range" min="0" max="100" step="1">
+            <div class="slider-ends" aria-hidden="true"><span>More to Spend</span><span>More to Goals</span></div>
+          </div>
+          <output id="whatif-split" for="whatif-slider" class="whatif-split"></output>
+          <p id="whatif-weekly" class="hint"></p>
+          <ul id="whatif-goals" class="whatif-goals"></ul>
+          <div class="actions">
+            <button type="button" id="whatif-apply" class="primary">Use this split</button>
+            <button type="button" id="whatif-reset">Back to my split</button>
+          </div>
+        </div>
+        <p id="whatif-locked" class="hint" hidden>Your split puts everything into Save, so there's nothing to move.
+          Use "Change my split" below to try a different one.</p>
+        <p id="whatif-result" class="result" role="status"></p>
+      </section>
+
       <section class="card" aria-labelledby="paycheck-title">
         <h2 id="paycheck-title">Log a paycheck</h2>
         <form id="paycheck-form" novalidate>

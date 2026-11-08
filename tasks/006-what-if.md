@@ -2,7 +2,7 @@
 id: 006
 title: What-if slider
 depends_on: [005]
-status: todo
+status: done
 ---
 
 ## Goal

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote,
+  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -97,4 +97,21 @@ test('goalStatus adds years when the wait is long, so big numbers make sense', (
   assert.equal(goalStatus({ ...base, weeks: 52 }), "About 52 weeks to go. That's about a year.");
   assert.equal(goalStatus({ ...base, weeks: 80 }), "About 80 weeks to go. That's over a year.");
   assert.equal(goalStatus({ ...base, weeks: 223 }), "About 223 weeks to go. That's about 4 years.");
+});
+
+// What-if (ticket 006)
+
+test('whatIfLine compares the trial weeks with now', () => {
+  const base = { name: 'Phone', done: false, averageWeeklyCents: 10000, trialGoalsPercent: 30 };
+  assert.equal(whatIfLine({ ...base, trialWeeks: 9, currentWeeks: 11 }), 'Phone: about 9 weeks (2 weeks sooner)');
+  assert.equal(whatIfLine({ ...base, trialWeeks: 12, currentWeeks: 11 }), 'Phone: about 12 weeks (1 week later)');
+  assert.equal(whatIfLine({ ...base, trialWeeks: 11, currentWeeks: 11 }), 'Phone: about 11 weeks (same as now)');
+  assert.equal(whatIfLine({ ...base, trialWeeks: 1, currentWeeks: Infinity }), 'Phone: about 1 week');
+});
+
+test('whatIfLine for finished goals, no pay, and 0% to Goals', () => {
+  const base = { name: 'Phone', trialWeeks: Infinity, currentWeeks: Infinity };
+  assert.equal(whatIfLine({ ...base, done: true, averageWeeklyCents: 0, trialGoalsPercent: 20 }), 'Phone: done already');
+  assert.equal(whatIfLine({ ...base, done: false, averageWeeklyCents: 0, trialGoalsPercent: 20 }), 'Phone: log a paycheck to see a date');
+  assert.equal(whatIfLine({ ...base, done: false, averageWeeklyCents: 5000, trialGoalsPercent: 0 }), "Phone: never, with 0% to Goals");
 });

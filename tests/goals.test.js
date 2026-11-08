@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { allocateToGoals, goalProjections, weeklyGoalsCents, projectGoals } from '../src/goals.js';
+import { allocateToGoals, goalProjections, weeklyGoalsCents, projectGoals, trialSplit, whatIf } from '../src/goals.js';
 import { emptyState, addPaycheck, addGoal } from '../src/storage.js';
 
 const phone = { id: 'g1', name: 'Phone', targetCents: 10000 };
@@ -108,4 +108,35 @@ test('projectGoals with no recent pay gives Infinity weeks, not a crash', () => 
   const result = projectGoals(state, '2026-11-07');
   assert.equal(result.averageWeeklyCents, 0);
   assert.equal(result.goals[0].weeks, Infinity);
+});
+
+// What-if (ticket 006)
+
+test('trialSplit moves percent between Spend and Goals and keeps Save fixed', () => {
+  const split = { spend: 50, save: 30, goals: 20 };
+  assert.deepEqual(trialSplit(split, 35), { spend: 35, save: 30, goals: 35 });
+  assert.deepEqual(trialSplit(split, 0), { spend: 70, save: 30, goals: 0 });
+  assert.deepEqual(trialSplit(split, 70), { spend: 0, save: 30, goals: 70 });
+  assert.deepEqual(trialSplit(split, 20), split);
+});
+
+test('trialSplit refuses a Goals percent outside what Spend and Goals share', () => {
+  const split = { spend: 50, save: 30, goals: 20 };
+  assert.throws(() => trialSplit(split, 71), RangeError);
+  assert.throws(() => trialSplit(split, -1), RangeError);
+  assert.throws(() => trialSplit(split, 20.5), RangeError);
+});
+
+test('whatIf projects every goal for a trial split without touching the state', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-06', cents: 40000 }); // 8000 to goals, $100 a week
+  state = addGoal(state, { name: 'Phone', targetCents: 30000 });
+  state = addGoal(state, { name: 'Car', targetCents: 100000 });
+  const snapshot = structuredClone(state);
+
+  const result = whatIf(state, '2026-11-07', 40);
+  assert.deepEqual(result.split, { spend: 30, save: 30, goals: 40 });
+  assert.equal(result.trial.weeklyCents, 4000);
+  assert.deepEqual(result.trial.goals.map((g) => g.weeks), [6, 31]); // 22000/4000 = 5.5; 122000/4000 = 30.5
+  assert.deepEqual(result.current.goals.map((g) => g.weeks), [11, 61]); // at 20%: 2000 a week
+  assert.deepEqual(state, snapshot);
 });

@@ -23,7 +23,7 @@ import {
 } from './storage.js';
 import { formatCents, centsToInput } from './money.js';
 import { localISODate } from './budget.js';
-import { projectGoals } from './goals.js';
+import { projectGoals, whatIf } from './goals.js';
 import {
   paycheckSentence,
   splitTotalHint,
@@ -33,6 +33,7 @@ import {
   goalStatus,
   goalProgress,
   unassignedNote,
+  whatIfLine,
 } from './words.js';
 import { readAmount, readPastDate, readSplitInputs, toPercent } from './forms.js';
 
@@ -189,6 +190,7 @@ el('split-form').addEventListener('submit', (event) => {
   clearError('split-error', allSplitInputs);
   const firstRun = state === null;
   editingSplit = false;
+  trialGoals = null;
   commit(state === null ? emptyState(result.split) : setSplit(state, result.split));
   if (firstRun) {
     inputEl('paycheck-amount').focus();
@@ -455,6 +457,81 @@ function renderGoals(current) {
 }
 
 // ---------------------------------------------------------------------------
+// What if? A slider that tries a different Goals share. Nothing is saved until "Use this split".
+
+const slider = inputEl('whatif-slider');
+/** The trial Goals percent, or null when the slider sits on the real split. */
+let trialGoals = /** @type {number | null} */ (null);
+
+slider.addEventListener('input', () => {
+  if (!state) return;
+  clearMessages();
+  trialGoals = Number(slider.value);
+  renderWhatIf(state);
+});
+
+el('whatif-reset').addEventListener('click', () => {
+  if (!state) return;
+  clearMessages();
+  trialGoals = null;
+  renderWhatIf(state);
+  slider.focus();
+});
+
+el('whatif-apply').addEventListener('click', () => {
+  if (!state || trialGoals === null || trialGoals === state.split.goals) return;
+  clearMessages();
+  const { split } = whatIf(state, localISODate(), trialGoals);
+  trialGoals = null;
+  commit(setSplit(state, split));
+  el('whatif-result').textContent =
+    `Done. Paychecks you log from now on will be split ${split.spend}% Spend, ${split.save}% Save, ${split.goals}% Goals.`;
+  slider.focus();
+});
+
+/** @param {State} current */
+function renderWhatIf(current) {
+  el('whatif').hidden = current.goals.length === 0;
+  if (current.goals.length === 0) return;
+
+  const shared = current.split.spend + current.split.goals;
+  el('whatif-controls').hidden = shared === 0;
+  el('whatif-locked').hidden = shared !== 0;
+  if (shared === 0) return;
+
+  if (trialGoals !== null && trialGoals > shared) trialGoals = null;
+  const goalsPercent = trialGoals ?? current.split.goals;
+  const result = whatIf(current, localISODate(), goalsPercent);
+  const { split, trial } = result;
+
+  slider.max = String(shared);
+  slider.value = String(goalsPercent);
+  const splitText = `Spend ${split.spend}% · Save ${split.save}% · Goals ${split.goals}%`;
+  el('whatif-split').textContent = splitText;
+  slider.setAttribute('aria-valuetext', `Goals ${split.goals}%, Spend ${split.spend}%`);
+  el('whatif-weekly').textContent = trial.averageWeeklyCents > 0
+    ? `That's about ${formatCents(trial.weeklyCents)} a week into Goals.`
+    : 'Log a paycheck to see dates.';
+
+  el('whatif-goals').replaceChildren(...trial.goals.map((g, i) => {
+    const li = document.createElement('li');
+    li.textContent = whatIfLine({
+      name: g.goal.name,
+      done: g.savedCents >= g.goal.targetCents,
+      trialWeeks: g.weeks,
+      currentWeeks: result.current.goals[i].weeks,
+      averageWeeklyCents: trial.averageWeeklyCents,
+      trialGoalsPercent: split.goals,
+    });
+    return li;
+  }));
+
+  const changed = goalsPercent !== current.split.goals;
+  /** @type {HTMLButtonElement} */ (el('whatif-apply')).disabled = !changed;
+  /** @type {HTMLButtonElement} */ (el('whatif-reset')).disabled = !changed;
+}
+
+// ---------------------------------------------------------------------------
 // Recent activity, with Remove buttons to fix mistakes
 
 const HISTORY_LIMIT = 20;
@@ -550,6 +627,7 @@ function render() {
     ? `You have ${formatCents(totals.spend)} to spend.`
     : 'Your Spend bucket is empty. Log a paycheck first.';
   renderGoals(state);
+  renderWhatIf(state);
   renderHistory(state);
 }
 
