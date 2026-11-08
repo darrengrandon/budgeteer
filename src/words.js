@@ -2,6 +2,7 @@
 // Pure functions, so the wording is tested without a browser.
 
 import { formatCents } from './money.js';
+import { addDays } from './budget.js';
 
 /**
  * "Your $42.50 became $21.25 to spend, $12.75 saved, $8.50 for goals."
@@ -164,4 +165,90 @@ export function spendAvailable(spendCents, hasPaychecks) {
   return hasPaychecks
     ? 'Your Spend bucket is empty. Log your next paycheck to add more.'
     : 'Your Spend bucket is empty. Log a paycheck first.';
+}
+
+// ---------------------------------------------------------------------------
+// Phone screens (ticket 014)
+
+/** Commas in a whole number of dollars: 1234 -> "1,234". */
+const withCommas = (/** @type {number} */ n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/**
+ * An exact amount without ".00": "$300", "$8.50", "$1,234". Never rounds.
+ * @param {number} cents
+ * @returns {string}
+ */
+export function moneyShort(cents) {
+  const full = formatCents(cents);
+  return full.endsWith('.00') ? full.slice(0, -3) : full;
+}
+
+/**
+ * The Home headline (SPEC.md "Spend about $X a week"): whole dollars, except under $10.
+ * @param {number | null} weeklySpendCents null before the first paycheck
+ * @returns {string}
+ */
+export function spendHeadline(weeklySpendCents) {
+  if (weeklySpendCents === null) return 'Log your first paycheck';
+  const amount = weeklySpendCents < 1000 && weeklySpendCents % 100 !== 0
+    ? formatCents(weeklySpendCents)
+    : `$${withCommas(Math.round(weeklySpendCents / 100))}`;
+  return `Spend about ${amount} a week`;
+}
+
+/**
+ * "$40 of $300"
+ * @param {number} savedCents
+ * @param {number} targetCents
+ * @returns {string}
+ */
+export function goalAmounts(savedCents, targetCents) {
+  return `${moneyShort(savedCents)} of ${moneyShort(targetCents)}`;
+}
+
+/**
+ * "Jan 9" this year, "Jan 9, 2027" otherwise.
+ * @param {string} iso
+ * @param {string} todayISO
+ * @returns {string}
+ */
+export function shortDateFrom(iso, todayISO) {
+  const full = shortDate(iso);
+  return iso.slice(0, 4) === todayISO.slice(0, 4) ? full.slice(0, full.lastIndexOf(',')) : full;
+}
+
+/**
+ * The line on a goal card.
+ * @param {{ savedCents: number, targetCents: number, weeks: number, hasPay: boolean,
+ *   goalsPercent: number, todayISO: string }} args
+ * @returns {string}
+ */
+export function readyLine({ savedCents, targetCents, weeks, hasPay, goalsPercent, todayISO }) {
+  if (savedCents >= targetCents) return 'You can buy it!';
+  if (!hasPay) return 'Log a paycheck to see when.';
+  if (goalsPercent === 0) return 'Your split puts nothing into Goals. Change it in Settings.';
+  if (!Number.isFinite(weeks)) return 'Ready once more pay comes in.';
+  const when = shortDateFrom(addDays(todayISO, weeks * 7), todayISO);
+  return `Ready in about ${weeks === 1 ? '1 week' : `${weeks} weeks`} (around ${when})`;
+}
+
+/**
+ * One goal's line after logging a paycheck: "Phone: ready in about 9 weeks (around Jan 9)".
+ * @param {{ name: string, savedCents: number, targetCents: number, weeks: number, hasPay: boolean,
+ *   goalsPercent: number, todayISO: string }} args
+ * @returns {string}
+ */
+export function goalTimeline({ name, ...rest }) {
+  const line = readyLine(rest);
+  return `${name}: ${line.charAt(0).toLowerCase()}${line.slice(1)}`;
+}
+
+/**
+ * "Nice! $85.00 came out of Goals for Concert tickets."
+ * @param {number} cents
+ * @param {string} name
+ * @returns {string}
+ */
+export function buySentence(cents, name) {
+  return `Nice! ${formatCents(cents)} came out of Goals for ${name}.`;
 }

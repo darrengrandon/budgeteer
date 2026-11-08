@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine, whatIfWeekly, spendAvailable,
+  spendHeadline, moneyShort, goalAmounts, shortDateFrom, readyLine, goalTimeline, buySentence,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -140,4 +141,56 @@ test('spendAvailable says what is left, and does not say "first" once paychecks 
   assert.equal(spendAvailable(1250, true), 'You have $12.50 to spend.');
   assert.equal(spendAvailable(0, false), 'Your Spend bucket is empty. Log a paycheck first.');
   assert.equal(spendAvailable(0, true), 'Your Spend bucket is empty. Log your next paycheck to add more.');
+});
+
+// Ticket 014: wording for the phone screens (SPEC.md "Screens" and "The numbers")
+
+test('spendHeadline says what to spend a week, in whole dollars, or asks for the first paycheck', () => {
+  assert.equal(spendHeadline(null), 'Log your first paycheck');
+  assert.equal(spendHeadline(5000), 'Spend about $50 a week');
+  assert.equal(spendHeadline(4751), 'Spend about $48 a week');
+  assert.equal(spendHeadline(123449), 'Spend about $1,234 a week');
+  assert.equal(spendHeadline(425), 'Spend about $4.25 a week'); // small amounts keep their cents
+  assert.equal(spendHeadline(0), 'Spend about $0 a week');
+});
+
+test('moneyShort drops ".00" but never rounds', () => {
+  assert.equal(moneyShort(30000), '$300');
+  assert.equal(moneyShort(850), '$8.50');
+  assert.equal(moneyShort(29960), '$299.60');
+  assert.equal(moneyShort(123400), '$1,234');
+});
+
+test('goalAmounts shows saved out of price', () => {
+  assert.equal(goalAmounts(4000, 30000), '$40 of $300');
+  assert.equal(goalAmounts(29960, 30000), '$299.60 of $300');
+});
+
+test('shortDateFrom adds the year only when it is not this year', () => {
+  assert.equal(shortDateFrom('2027-01-09', '2026-11-07'), 'Jan 9, 2027');
+  assert.equal(shortDateFrom('2026-12-25', '2026-11-07'), 'Dec 25');
+});
+
+test('readyLine: weeks and a date, or that it can be bought', () => {
+  const base = { savedCents: 4000, targetCents: 30000, hasPay: true, goalsPercent: 20, todayISO: '2026-11-07' };
+  assert.equal(readyLine({ ...base, weeks: 9 }), 'Ready in about 9 weeks (around Jan 9, 2027)');
+  assert.equal(readyLine({ ...base, weeks: 3 }), 'Ready in about 3 weeks (around Nov 28)');
+  assert.equal(readyLine({ ...base, weeks: 1 }), 'Ready in about 1 week (around Nov 14)');
+  assert.equal(readyLine({ ...base, savedCents: 30000, weeks: 0 }), 'You can buy it!');
+});
+
+test('readyLine with no paychecks, or nothing going to Goals', () => {
+  const base = { savedCents: 0, targetCents: 30000, weeks: Infinity, todayISO: '2026-11-07' };
+  assert.equal(readyLine({ ...base, hasPay: false, goalsPercent: 20 }), 'Log a paycheck to see when.');
+  assert.equal(readyLine({ ...base, hasPay: true, goalsPercent: 0 }), 'Your split puts nothing into Goals. Change it in Settings.');
+});
+
+test('goalTimeline is the line under "where your money went"', () => {
+  const base = { savedCents: 4000, targetCents: 30000, hasPay: true, goalsPercent: 20, todayISO: '2026-11-07' };
+  assert.equal(goalTimeline({ ...base, name: 'Phone', weeks: 9 }), 'Phone: ready in about 9 weeks (around Jan 9, 2027)');
+  assert.equal(goalTimeline({ ...base, name: 'Tickets', savedCents: 30000, weeks: 0 }), 'Tickets: you can buy it!');
+});
+
+test('buySentence says what came out of Goals', () => {
+  assert.equal(buySentence(8500, 'Concert tickets'), 'Nice! $85.00 came out of Goals for Concert tickets.');
 });

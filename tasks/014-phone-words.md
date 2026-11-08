@@ -2,7 +2,7 @@
 id: 014
 title: Wording for the phone screens
 depends_on: [012, 013]
-status: todo
+status: done
 ---
 
 ## Goal
