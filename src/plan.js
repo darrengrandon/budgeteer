@@ -2,9 +2,12 @@
 
 import { weeklyPay, weeklySpendCents, gotPaidDue, paydays, payGap, gapDays } from './pay.js';
 import { projectGoals } from './goals.js';
-import { balances } from './storage.js';
+import { balances, paycheckParts } from './storage.js';
 import { splitIncome, addDays } from './budget.js';
-import { spendHeadline, payBasis, goalAmounts, readyLine } from './words.js';
+import {
+  spendHeadline, payBasis, goalAmounts, readyLine,
+  explainHeadline, explainBasis, explainGoalAmounts, explainReady, explainLeftToSpend,
+} from './words.js';
 
 /** @typedef {import('./storage.js').State} State */
 /** @typedef {import('./storage.js').Split} Split */
@@ -20,7 +23,12 @@ import { spendHeadline, payBasis, goalAmounts, readyLine } from './words.js';
  * @property {string} amounts "$40 of $300"
  * @property {string} line "Ready in about 9 weeks (around Jan 9)" or "You can buy it!"
  * @property {boolean} canMoveToBuy not first, but Goals already holds its price (REVIEW.md L6)
+ * @property {string} amountsExplain what "$40 of $300" means (step 3a)
+ * @property {string} lineExplain how the ready date was found; '' when the line has no number
  */
+
+/** Recent paydays that count toward weekly pay (src/pay.js). */
+const RECENT_PAYDAYS = 6;
 
 /** "Back up your info" shows after this many paychecks since the last backup on this phone. */
 const PAYCHECKS_PER_BACKUP = 4;
@@ -41,7 +49,8 @@ export function backupDue(paycheckCount, lastCount) {
  * @param {State} state
  * @param {string} todayISO
  * @param {Split} [split]
- * @returns {{ headline: string, basis: string, nudge: boolean, goals: GoalCard[] }}
+ * @returns {{ headline: string, basis: string, nudge: boolean, goals: GoalCard[],
+ *   explain: { headline: string, basis: string } }}
  */
 export function homePlan(state, todayISO, split = state.split) {
   const frequency = state.settings?.payFrequency ?? 'varies';
@@ -56,16 +65,41 @@ export function homePlan(state, todayISO, split = state.split) {
   const gap = payGap(state.paychecks, todayISO, frequency);
   const typical = pay ? Math.floor((pay.cents * gap.num) / (pay.days * gap.den)) : 0;
   const perPayday = typical > 0 ? splitIncome(typical, split).goals : 0;
+  const weeklySpend = weeklySpendCents(pay, split.spend);
+  const weeklyPayCents = pay ? Math.round((pay.cents * 7) / pay.days) : 0;
   let targetSoFar = 0;
   return {
-    headline: spendHeadline(weeklySpendCents(pay, split.spend)),
-    basis: pay ? payBasis(Math.round((pay.cents * 7) / pay.days)) : '',
+    headline: spendHeadline(weeklySpend),
+    basis: pay ? payBasis(weeklyPayCents) : '',
     nudge: gotPaidDue(state.paychecks, todayISO, frequency),
+    explain: pay ? {
+      headline: explainHeadline(weeklyPayCents, split.spend, weeklySpend ?? 0),
+      basis: explainBasis({
+        averageCents: typical,
+        paydayCount: Math.min(days.length, RECENT_PAYDAYS),
+        frequency,
+        gapDays: gap.num / gap.den,
+        weeklyPayCents,
+      }),
+    } : { headline: '', basis: '' },
     goals: projection.goals.map(({ goal, savedCents, weeks }, index) => {
       const funded = savedCents >= goal.targetCents;
       const canMoveToBuy = index > 0 && !funded && goal.targetCents <= goalsBalance;
       targetSoFar += goal.targetCents;
-      const paydaysNeeded = perPayday > 0 ? Math.ceil((targetSoFar - goalsBalance) / perPayday) : Infinity;
+      const neededCents = targetSoFar - goalsBalance;
+      const paydaysNeeded = perPayday > 0 ? Math.ceil(neededCents / perPayday) : Infinity;
+      const dateISO = Number.isFinite(paydaysNeeded) ? addDays(lastPayday, gapDays(gap, paydaysNeeded)) : undefined;
+      const line = canMoveToBuy
+        ? "The money's already in Goals. Move it to the top to buy it now."
+        : readyLine({
+          savedCents,
+          targetCents: goal.targetCents,
+          weeks: Number.isFinite(paydaysNeeded) ? weeks : Infinity,
+          hasPay: pay !== null,
+          goalsPercent: split.goals,
+          todayISO,
+          dateISO,
+        });
       return {
         id: goal.id,
         name: goal.name,
@@ -75,18 +109,24 @@ export function homePlan(state, todayISO, split = state.split) {
         funded,
         canMoveToBuy,
         amounts: goalAmounts(savedCents, goal.targetCents),
-        line: canMoveToBuy
-          ? "The money's already in Goals. Move it to the top to buy it now."
-          : readyLine({
-            savedCents,
-            targetCents: goal.targetCents,
-            weeks: Number.isFinite(paydaysNeeded) ? weeks : Infinity,
-            hasPay: pay !== null,
-            goalsPercent: split.goals,
-            todayISO,
-            dateISO: Number.isFinite(paydaysNeeded) ? addDays(lastPayday, gapDays(gap, paydaysNeeded)) : undefined,
-          }),
+        line,
+        amountsExplain: explainGoalAmounts({ name: goal.name, savedCents, targetCents: goal.targetCents, first: index === 0 }),
+        // Only "Ready in about N weeks (around ...)" has a number to explain (readyLine).
+        lineExplain: line.startsWith('Ready in about') && dateISO
+          ? explainReady({ perPaydayCents: perPayday, neededCents, dateISO, todayISO, first: index === 0 })
+          : '',
       };
     }),
   };
+}
+
+/**
+ * What "$95.00 left to spend" is made of (step 3a).
+ * @param {State} state
+ * @returns {string}
+ */
+export function spendingExplain(state) {
+  const inCents = state.paychecks.reduce((sum, p) => sum + paycheckParts(p).spend, 0);
+  const spentCents = state.purchases.reduce((sum, b) => sum + b.cents, 0);
+  return explainLeftToSpend(inCents, spentCents);
 }

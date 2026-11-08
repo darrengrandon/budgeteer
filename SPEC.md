@@ -63,6 +63,12 @@ the info if Budgeteer isn't opened for a week. A "Back up your info" card shows 
 Messages under the headline ("Added "Shoes".") fade after 10 seconds and clear as soon as
 the data changes, so they never describe something that was undone.
 
+Every number on Home has a dotted line under it and can be tapped: one plain sentence opens
+right below it saying where the number comes from ("You get about $100 a week and 50% of each
+paycheck goes to Spend, so about $50 a week is yours to spend."). That covers the headline,
+the pay line, each goal's "$40 of $300" and "Ready in about..." line, and with tracking on,
+"left to spend" and each latest amount. One is open at a time; a second tap closes it.
+
 ### Paycheck sheet
 A bottom sheet with the amount only (date is today) on the numeric keypad, and a
 "Same as last time" chip when there is an earlier paycheck.

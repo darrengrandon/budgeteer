@@ -36,11 +36,12 @@ import {
 import { buyGoal } from './goals.js';
 import { centsToInput, formatCents } from './money.js';
 import { localISODate, addDays } from './budget.js';
-import { homePlan, backupDue } from './plan.js';
+import { homePlan, backupDue, spendingExplain } from './plan.js';
 import { missedPaydays } from './pay.js';
 import {
   paycheckSentence,
   goalTimeline,
+  explainActivity,
   buySentence,
   splitTotalHint,
   shortDate,
@@ -1083,6 +1084,7 @@ function renderSpending() {
   el('spending').hidden = !tracking;
   if (!tracking) return;
   el('left-to-spend').textContent = leftToSpend(balances(state).spend);
+  setExplain(el('left-to-spend'), 'left-explain', spendingExplain(state));
   el('recent').replaceChildren(...recentActivity(state, 3).items.map((item) => {
     const words = historyWords(item);
     const li = document.createElement('li');
@@ -1098,10 +1100,88 @@ function renderSpending() {
     const amount = document.createElement('span');
     amount.className = item.kind === 'paycheck' ? 'history-amount in' : 'history-amount';
     amount.textContent = words.amount;
+    const paycheck = item.kind === 'paycheck' ? state?.paychecks.find((p) => p.id === item.id) : undefined;
+    setExplain(amount, 'recent-explain', explainActivity(item, paycheck && paycheckParts(paycheck)));
     li.append(text, amount);
     return li;
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Tap-to-explain (lazy-v2 step 3a): every number on Home shows one plain sentence below it
+// when tapped. One is open at a time; a second tap closes it.
+
+/**
+ * The explanation box for a number: the one in the page, or for a goal card a new one placed
+ * right after the number (removed again on close, so a closed card has only its own parts).
+ * @param {HTMLElement} target
+ * @returns {HTMLElement}
+ */
+function explainBoxFor(target) {
+  const id = target.getAttribute('aria-controls') ?? '';
+  const found = document.getElementById(id);
+  if (found) return found;
+  const box = document.createElement('p');
+  box.id = id;
+  box.className = 'explain';
+  box.dataset.made = 'true';
+  target.after(box);
+  return box;
+}
+
+/**
+ * Make a number tappable, with its sentence shown in the box boxId. An empty sentence makes it
+ * plain text again.
+ * @param {HTMLElement} target
+ * @param {string} boxId
+ * @param {string} sentence
+ */
+function setExplain(target, boxId, sentence) {
+  if (sentence === '') {
+    for (const name of ['role', 'aria-expanded', 'aria-controls', 'data-explain']) target.removeAttribute(name);
+    target.tabIndex = -1;
+    return;
+  }
+  target.setAttribute('role', 'button');
+  target.tabIndex = 0;
+  target.setAttribute('aria-expanded', 'false');
+  target.setAttribute('aria-controls', boxId);
+  target.dataset.explain = sentence;
+}
+
+/** Close every open explanation on Home. */
+function closeExplains() {
+  for (const target of el('home').querySelectorAll('[data-explain][aria-expanded="true"]')) {
+    target.setAttribute('aria-expanded', 'false');
+  }
+  for (const box of /** @type {NodeListOf<HTMLElement>} */ (el('home').querySelectorAll('.explain'))) {
+    if (box.dataset.made === 'true') box.remove();
+    else box.hidden = true;
+  }
+}
+
+/** @param {HTMLElement} target */
+function toggleExplain(target) {
+  const wasOpen = target.getAttribute('aria-expanded') === 'true';
+  closeExplains();
+  if (wasOpen) return;
+  const box = explainBoxFor(target);
+  box.textContent = target.dataset.explain ?? '';
+  box.hidden = false;
+  target.setAttribute('aria-expanded', 'true');
+}
+
+el('home').addEventListener('click', (event) => {
+  const target = /** @type {HTMLElement | null} */ (/** @type {Element} */ (event.target).closest('[data-explain]'));
+  if (target) toggleExplain(target);
+});
+el('home').addEventListener('keydown', (event) => {
+  const target = /** @type {HTMLElement | null} */ (/** @type {Element} */ (event.target).closest('[data-explain]'));
+  if (target && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault();
+    toggleExplain(target);
+  }
+});
 
 // Backup: download the records as a file, or restore them from one. A restored file is
 // untrusted: importBackup checks every field (and dates against today) before anything changes.
@@ -1190,6 +1270,7 @@ function goalCard(goal, top) {
   const amounts = document.createElement('p');
   amounts.className = 'goal-amounts';
   amounts.textContent = goal.amounts;
+  setExplain(amounts, `explain-${goal.id}-amounts`, goal.amountsExplain);
 
   const bar = document.createElement('progress');
   bar.max = goal.targetCents;
@@ -1199,6 +1280,7 @@ function goalCard(goal, top) {
   const ready = document.createElement('p');
   ready.className = 'goal-ready';
   ready.textContent = goal.line;
+  setExplain(ready, `explain-${goal.id}-ready`, goal.lineExplain);
 
   li.append(head, amounts, bar, ready);
   if (goal.funded) {
@@ -1224,6 +1306,7 @@ function render() {
   if (settingsSheet.open) renderSettings();
 
   const plan = homePlan(state, localISODate());
+  closeExplains();
   el('nudge').hidden = !plan.nudge;
   el('headline').textContent = plan.headline;
   el('basis').textContent = plan.basis;
@@ -1233,14 +1316,18 @@ function render() {
   renderSpending();
   el('install-card').hidden = !installHelpWanted();
   el('backup-card').hidden = !backupDue(state.paychecks.length, readBackupMark());
-  // Before the first paycheck, the headline itself opens the paycheck sheet.
+  // Before the first paycheck, the headline itself opens the paycheck sheet. After it, the
+  // headline and the pay line explain themselves when tapped (step 3a).
   if (plan.basis === '') {
+    setExplain(el('headline'), 'headline-explain', '');
     el('headline').setAttribute('role', 'button');
     el('headline').tabIndex = 0;
+    el('headline').dataset.opensSheet = 'true';
   } else {
-    el('headline').removeAttribute('role');
-    el('headline').tabIndex = -1;
+    delete el('headline').dataset.opensSheet;
+    setExplain(el('headline'), 'headline-explain', plan.explain.headline);
   }
+  setExplain(el('basis'), 'basis-explain', plan.explain.basis);
 }
 
 // ---------------------------------------------------------------------------
@@ -1284,7 +1371,7 @@ el('backup-download').addEventListener('click', markBackup);
 
 // "Log your first paycheck" opens the paycheck sheet (REVIEW.md L12).
 const headline = el('headline');
-const headlineOpensSheet = () => headline.getAttribute('role') === 'button';
+const headlineOpensSheet = () => headline.dataset.opensSheet === 'true';
 headline.addEventListener('click', () => {
   if (headlineOpensSheet()) openPaySheet();
 });

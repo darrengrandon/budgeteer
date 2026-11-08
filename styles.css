@@ -884,9 +884,26 @@ dialog.sheet.full {
   margin-top: 0.5rem;
 }
 
-.headline[role="button"] {
+.headline[data-opens-sheet] {
   cursor: pointer;
   text-decoration: underline;
   text-decoration-thickness: 3px;
   text-underline-offset: 6px;
+}
+
+/* Tap-to-explain (lazy-v2 step 3a): a number with a dotted line under it shows one sentence. */
+[data-explain] {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+}
+
+.explain {
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--input-bg);
+  font-size: 0.95rem;
 }

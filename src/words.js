@@ -274,3 +274,99 @@ export function buySentence(cents, name, paidCents = cents) {
   const extra = paidCents > cents ? ` The extra ${formatCents(paidCents - cents)} didn't come from Goals.` : '';
   return `Nice! ${formatCents(cents)} came out of Goals for ${name}.${extra}`;
 }
+
+// ---------------------------------------------------------------------------
+// Tap-to-explain (lazy-v2 step 3a): one plain sentence for each number on Home.
+
+/** How often, in words, for each stated pay frequency. */
+const PAID_EVERY = Object.freeze({
+  weekly: 'every week',
+  biweekly: 'every 2 weeks',
+  'twice-monthly': 'twice a month',
+  monthly: 'once a month',
+});
+
+/**
+ * Where "Spend about $X a week" comes from.
+ * @param {number} weeklyPayCents
+ * @param {number} spendPercent
+ * @param {number} weeklySpendCents
+ * @returns {string}
+ */
+export function explainHeadline(weeklyPayCents, spendPercent, weeklySpendCents) {
+  if (spendPercent === 0) {
+    return 'Your split puts 0% of each paycheck into Spend, so there is nothing to spend each week. You can change that in Settings.';
+  }
+  return `You get about ${aboutAmount(weeklyPayCents)} a week and ${spendPercent}% of each paycheck goes to Spend, `
+    + `so about ${aboutAmount(weeklySpendCents)} a week is yours to spend.`;
+}
+
+/**
+ * How "Out of about $X a week of pay" was worked out.
+ * @param {{ averageCents: number, paydayCount: number, frequency: import('./storage.js').PayFrequency,
+ *   gapDays: number, weeklyPayCents: number }} args
+ * @returns {string}
+ */
+export function explainBasis({ averageCents, paydayCount, frequency, gapDays, weeklyPayCents }) {
+  const pay = paydayCount === 1
+    ? `Your payday was ${formatCents(averageCents)}`
+    : `Your last ${paydayCount} paydays average ${formatCents(averageCents)}`;
+  const week = `so that's about ${aboutAmount(weeklyPayCents)} a week.`;
+  if (frequency !== 'varies') return `${pay} and you get paid ${PAID_EVERY[frequency]}, ${week}`;
+  if (paydayCount === 1) return `${pay}, and until you log another one Budgeteer guesses you get paid every 2 weeks, ${week}`;
+  return `${pay} and they come about every ${gapDays} days, ${week}`;
+}
+
+/**
+ * What "$40 of $300" on a goal card means.
+ * @param {{ name: string, savedCents: number, targetCents: number, first: boolean }} args
+ * @returns {string}
+ */
+export function explainGoalAmounts({ name, savedCents, targetCents, first }) {
+  if (savedCents >= targetCents) return `Your Goals money covers all ${moneyShort(targetCents)} for ${name}.`;
+  const toGo = moneyShort(targetCents - savedCents);
+  if (first) return `You have ${moneyShort(savedCents)} saved toward ${name}, which costs ${moneyShort(targetCents)}, so ${toGo} to go.`;
+  return `Goals money fills your goals from the top, so ${name} has ${moneyShort(savedCents)} of its `
+    + `${moneyShort(targetCents)} so far, with ${toGo} to go.`;
+}
+
+/**
+ * How the date in "Ready in about N weeks (around ...)" was found.
+ * @param {{ perPaydayCents: number, neededCents: number, dateISO: string, todayISO: string, first: boolean }} args
+ * @returns {string}
+ */
+export function explainReady({ perPaydayCents, neededCents, dateISO, todayISO, first }) {
+  const when = `should be there by the payday around ${shortDateFrom(dateISO, todayISO)}.`;
+  const each = `About ${moneyShort(perPaydayCents)} of each paycheck goes to Goals`;
+  return first
+    ? `${each}, so the ${moneyShort(neededCents)} still needed ${when}`
+    : `${each}, and the ${moneyShort(neededCents)} needed for this goal and the ones above it ${when}`;
+}
+
+/**
+ * What "$95.00 left to spend" is made of.
+ * @param {number} inCents everything paychecks put into Spend
+ * @param {number} spentCents all logged purchases
+ * @returns {string}
+ */
+export function explainLeftToSpend(inCents, spentCents) {
+  const went = `Your paychecks put ${formatCents(inCents)} into Spend`;
+  if (spentCents === 0) return `${went} and you haven't logged any purchases yet.`;
+  return `${went} and you've logged ${formatCents(spentCents)} of purchases, so ${formatCents(inCents - spentCents)} is left.`;
+}
+
+/**
+ * What one amount in the latest list was.
+ * @param {{ kind: 'paycheck' | 'purchase' | 'goalPurchase', cents: number, name?: string }} item
+ * @param {{ spend: number, save: number, goals: number }} [parts] a paycheck's cents per bucket
+ * @returns {string}
+ */
+export function explainActivity(item, parts) {
+  const money = formatCents(item.cents);
+  if (item.kind === 'paycheck' && parts) {
+    return `This ${money} paycheck put ${formatCents(parts.spend)} into Spend, ${formatCents(parts.save)} into Save `
+      + `and ${formatCents(parts.goals)} into Goals.`;
+  }
+  if (item.kind === 'goalPurchase') return `This ${money} came out of Goals when you bought ${item.name}.`;
+  return `This ${money} purchase came out of Spend.`;
+}
