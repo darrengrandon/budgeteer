@@ -70,6 +70,9 @@ A bottom sheet with the amount only (date is today) on the numeric keypad, and a
   yesterday."
 - If a payday was clearly skipped (see "Missed paydays"), a chip offers "Also add the
   paycheck I missed (around Nov 21)"; with it on, the same amount is also logged on that date.
+- The same amount as a paycheck already logged today asks first: "You already logged
+  $212.40 today. Log another paycheck?" with "No, it's already logged" (where "Add paycheck"
+  was) and "Yes, log another". The second tap of a double tap never saves, confirms or undoes.
 - An amount 4 times the last paycheck or more asks first: "That's a lot more than last
   time ($312.47). Is $31,247.00 right?", and the button becomes "Yes, add $31,247.00".
 After saving, the sheet shows where the money went ("Your $42.50 became $21.25 to spend,
@@ -208,3 +211,5 @@ Answered by the owner on 2026-11-07.
 13. **Overnight decisions (owner, 2026-11-08):** goal dates are rounded up to the next likely
     payday so they are never early; a blocking "Log another paycheck?" step for a repeat of
     today's or yesterday's amount; and "Is that right?" for any paycheck over $3,000.
+    Built so far: the repeat step for today only. Yesterday needs the owner's OK to change
+    the review2 L1 test, which logs a repeat the next day on purpose.

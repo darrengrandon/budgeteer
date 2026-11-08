@@ -83,6 +83,7 @@ test('"Same as last time" fills in the last paycheck', async ({ page }) => {
   await sheet.getByRole('button', { name: 'Same as last time ($212.40)' }).click();
   await expect(sheet.getByLabel('Take-home amount')).toHaveValue('212.40');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
+  await sheet.getByRole('button', { name: 'Yes, log another' }).click(); // overnight decision 2: same amount today asks first
   await expect(sheet.getByText('Nice. Your $212.40 became $106.20 to spend, $63.72 saved, $42.48 for goals.')).toBeVisible();
 });
 
@@ -150,9 +151,17 @@ test('two open tabs never erase each other', async ({ page }) => {
   const other = await page.context().newPage();
   await other.clock.setFixedTime(TODAY);
   await other.goto(APP);
-  await logPaycheck(page, '100'); // two paydays on one day: $200 per 14 days
+  // Overnight decision 2: the same amount again today asks "Log another paycheck?" first.
+  const logAnother = async (/** @type {import('@playwright/test').Page} */ tab) => {
+    await tab.getByRole('button', { name: 'I got paid' }).click();
+    await tab.locator('#pay-sheet').getByLabel('Take-home amount').fill('100');
+    await tab.getByRole('button', { name: 'Add paycheck' }).click();
+    await tab.getByRole('button', { name: 'Yes, log another' }).click();
+    await tab.getByRole('button', { name: 'Done' }).click();
+  };
+  await logAnother(page); // two paydays on one day: $200 per 14 days
   await expect(other.locator('#headline')).toHaveText('Spend about $50 a week'); // picked up without a reload
-  await logPaycheck(other, '100');
+  await logAnother(other);
   await expect(page.locator('#headline')).toHaveText('Spend about $75 a week');
 });
 

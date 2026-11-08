@@ -317,12 +317,54 @@ let justAddedIds = /** @type {string[]} */ ([]);
 let missed = /** @type {string[]} */ ([]);
 /** An unusually big amount the teen has already been asked about (REVIEW.md L5). */
 let confirmedCents = /** @type {number | null} */ (null);
+/** The teen said "Yes, log another" to a repeat of today's or yesterday's amount. */
+let repeatConfirmed = false;
+
+/**
+ * Show or hide the "Log another paycheck?" step (SPEC.md decision 13). Its "No" button takes
+ * the place of "Add paycheck", so a double tap lands on "No", not on a second paycheck.
+ * @param {string} question empty to hide the step
+ */
+function showRepeatStep(question) {
+  const asking = question !== '';
+  el('pay-repeat').textContent = question;
+  el('pay-repeat').hidden = !asking;
+  paySubmit.hidden = asking;
+  el('pay-repeat-no').hidden = !asking;
+  el('pay-cancel').hidden = asking;
+  el('pay-repeat-yes').hidden = !asking;
+}
 
 /** Back to "Add paycheck" after the amount changes. */
 function resetPayQuestion() {
   confirmedCents = null;
+  repeatConfirmed = false;
   paySubmit.textContent = 'Add paycheck';
+  showRepeatStep('');
 }
+
+/**
+ * True for the second tap of a double tap (the browser counts it as click number 2).
+ * @param {Event} event
+ */
+const isSecondTap = (event) => event instanceof MouseEvent && event.detail > 1;
+
+// The second tap of a double tap never saves, confirms or undoes anything.
+paySubmit.addEventListener('click', (event) => {
+  if (isSecondTap(event)) event.preventDefault();
+});
+
+el('pay-repeat-no').addEventListener('click', (event) => {
+  if (isSecondTap(event)) return;
+  paySheet.close();
+  setStatus('OK. Nothing new was logged.');
+});
+
+el('pay-repeat-yes').addEventListener('click', (event) => {
+  if (isSecondTap(event)) return;
+  repeatConfirmed = true;
+  /** @type {HTMLFormElement} */ (el('pay-form')).requestSubmit();
+});
 
 payAmount.addEventListener('input', () => {
   clearErrors(paySheet);
@@ -409,6 +451,16 @@ el('pay-form').addEventListener('submit', (event) => {
   }
 
   const today = localISODate();
+  // The same amount as a paycheck already logged today is probably a repeat: ask first.
+  // (The owner asked for "today or yesterday"; yesterday waits for their OK to change the
+  // review2 L1 test, which logs a repeat the next day. See overnight-review/OVERNIGHT-REPORT.md.)
+  const repeat = state.paychecks.find((p) => p.cents === amount.cents && p.date === today);
+  if (repeat && !repeatConfirmed) {
+    showRepeatStep(`You already logged ${formatCents(amount.cents)} today. Log another paycheck?`);
+    el('pay-repeat-no').focus();
+    return;
+  }
+
   const backfill = payMissed.getAttribute('aria-pressed') === 'true' ? missed : [];
   let next = state;
   /** @type {string[]} */
@@ -472,7 +524,8 @@ function undoAdded() {
   return true;
 }
 
-el('pay-undo').addEventListener('click', () => {
+el('pay-undo').addEventListener('click', (event) => {
+  if (isSecondTap(event)) return;
   if (!undoAdded()) {
     el('pay-undo-error').textContent = "That paycheck can't be taken back now, because its money was already used.";
     return;
