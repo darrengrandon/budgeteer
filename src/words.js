@@ -146,15 +146,16 @@ export function shortDateFrom(iso, todayISO) {
  * The line on a goal card. The date is counted from fromISO (the last payday), so it stays
  * put between paydays (REVIEW.md L10); the weeks shown are from today.
  * @param {{ savedCents: number, targetCents: number, weeks: number, hasPay: boolean,
- *   goalsPercent: number, todayISO: string, fromISO?: string }} args
+ *   goalsPercent: number, todayISO: string, fromISO?: string, dateISO?: string }} args
  * @returns {string}
  */
-export function readyLine({ savedCents, targetCents, weeks, hasPay, goalsPercent, todayISO, fromISO = todayISO }) {
+export function readyLine({ savedCents, targetCents, weeks, hasPay, goalsPercent, todayISO, fromISO = todayISO, dateISO }) {
   if (savedCents >= targetCents) return 'You can buy it!';
   if (!hasPay) return 'Log a paycheck to see when.';
   if (goalsPercent === 0) return 'Your split puts nothing into Goals. Change it in Settings.';
   if (!Number.isFinite(weeks)) return 'Ready once more pay comes in.';
-  const date = addDays(fromISO, weeks * 7);
+  // dateISO: the payday when the money will be there (src/plan.js); otherwise weeks from fromISO.
+  const date = dateISO ?? addDays(fromISO, weeks * 7);
   const daysLeft = dayNumber(date) - dayNumber(todayISO);
   if (daysLeft <= 0) return 'Should be ready by now. Log your paycheck to check.';
   return `Ready in about ${howLong(Math.ceil(daysLeft / 7))} (around ${shortDateFrom(date, todayISO)})`;

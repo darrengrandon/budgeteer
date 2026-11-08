@@ -238,5 +238,5 @@ test('L13: messages on Home fade after a while', async ({ page }) => {
 test('L14: a long wait is said in years', async ({ page }) => {
   await open(page);
   await seed(page, v2({ paychecks: [P('p1', '2026-11-07', 31247)], goals: [{ id: 'g1', name: 'Car', targetCents: 500000 }] }));
-  await expect(page.locator('.goal-card').first()).toContainText('Ready in about 3 years (around Nov 24, 2029)');
+  await expect(page.locator('.goal-card').first()).toContainText('Ready in about 3 years (around Dec 1, 2029)');
 });

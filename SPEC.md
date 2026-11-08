@@ -126,10 +126,12 @@ Weekly pay × Spend percent ÷ 100, rounded to whole dollars.
 
 ### When can I buy it
 Goals-bucket money fills goals top to bottom, each up to its price. A goal is reached
-when the Goals bucket covers its price plus every price above it. Weeks to go = what is
-still missing ÷ (weekly pay × Goals percent ÷ 100), rounded up. The date is the last
-payday plus that many weeks ("around Jan 9", with the year when it is not this year), so it
-stays put between paydays; the weeks shown count from today. If that date has passed and
+when the Goals bucket covers its price plus every price above it. The date is the payday
+when the money will really be there, so it is never early: a typical payday (the recent
+paydays' average, rounded down to the cent) is split the way the app splits it, and the
+Goals part is counted again every usual gap after the last payday until what is still
+missing is covered ("around Jan 2", with the year when it is not this year). It stays put
+between paydays; the weeks shown count from today, rounded up. If that date has passed and
 the goal still isn't funded: "Should be ready by now. Log your paycheck to check." Over 52
 weeks it says "about a year", and from 78 weeks on, years ("about 3 years"). With no
 paychecks: "Log a paycheck to see when." With 0% to Goals: "Your split puts nothing
@@ -202,6 +204,7 @@ Answered by the owner on 2026-11-07.
 11. **Docs:** CONTEXT.md is the glossary; docs/adr/ records the big decisions.
 12. **Second review (REVIEW.md L1-L14):** the rules above now include close paychecks
     merging into one payday, missed paydays, dates counted from the last payday, years for
-    long waits, the big-amount question and the backup nudge. Not done, waiting for the
-    owner: rounding goal dates to a payday (L10, "a week early"), which would change the
-    expected dates in about ten existing tests.
+    long waits, the big-amount question and the backup nudge.
+13. **Overnight decisions (owner, 2026-11-08):** goal dates are rounded up to the next likely
+    payday so they are never early; a blocking "Log another paycheck?" step for a repeat of
+    today's or yesterday's amount; and "Is that right?" for any paycheck over $3,000.

@@ -2,7 +2,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { homePlan, backupDue } from '../src/plan.js';
-import { newState, addPaycheck, addGoal, setSplit } from '../src/storage.js';
+import { newState, addPaycheck, addGoal, setSplit, balances } from '../src/storage.js';
+import { addDays } from '../src/budget.js';
+import { shortDateFrom } from '../src/words.js';
 
 const TODAY = '2026-11-07';
 
@@ -24,7 +26,7 @@ test('after one $200 paycheck: spend about $50 a week, and the goal has a date',
   assert.equal(plan.headline, 'Spend about $50 a week');
   assert.equal(plan.basis, 'Out of about $100 a week of pay.');
   assert.deepEqual(plan.goals.map((g) => [g.amounts, g.line]),
-    [['$40 of $300', 'Ready in about 13 weeks (around Feb 6, 2027)']]);
+    [['$40 of $300', 'Ready in about 14 weeks (around Feb 13, 2027)']]);
 });
 
 test('a funded goal can be bought, and the next goal waits its turn', () => {
@@ -35,7 +37,7 @@ test('a funded goal can be bought, and the next goal waits its turn', () => {
   assert.equal(tickets.funded, true);
   assert.equal(tickets.line, 'You can buy it!');
   assert.equal(phone.amounts, '$10 of $300');
-  assert.equal(phone.line, 'Ready in about 15 weeks (around Feb 20, 2027)'); // $290 left at $20 a week = 14.5
+  assert.equal(phone.line, 'Ready in about 16 weeks (around Feb 27, 2027)'); // $290 left at $20 a week = 14.5
 });
 
 test('the headline follows the Spend percent', () => {
@@ -55,8 +57,8 @@ test('the "Got paid?" nudge shows after the usual gap plus 2 days', () => {
 test('L10: Home counts the goal date from the last payday, so it does not slide', () => {
   let state = addPaycheck(newState(), { date: '2026-11-07', cents: 31247 });
   state = addGoal(state, { name: 'AirPods', targetCents: 25000 });
-  assert.equal(homePlan(state, '2026-11-07').goals[0].line, 'Ready in about 7 weeks (around Dec 26)');
-  assert.equal(homePlan(state, '2026-11-20').goals[0].line, 'Ready in about 6 weeks (around Dec 26)');
+  assert.equal(homePlan(state, '2026-11-07').goals[0].line, 'Ready in about 8 weeks (around Jan 2, 2027)');
+  assert.equal(homePlan(state, '2026-11-20').goals[0].line, 'Ready in about 7 weeks (around Jan 2, 2027)');
 });
 
 test('L6: a goal the Goals money could buy now, if it were first, says so', () => {
@@ -74,4 +76,43 @@ test('L4: a backup is due after 4 paychecks since the last one on this phone', (
   assert.equal(backupDue(4, null), true);
   assert.equal(backupDue(7, 4), false);
   assert.equal(backupDue(8, 4), true);
+});
+
+// Overnight Phase 1, decision 1: "around <date>" is rounded up to the payday when the money
+// will really be there, so it is never early.
+
+test('the goal date is the payday when the money really arrives (REVIEW.md L10 example)', () => {
+  let state = addPaycheck(newState(), { date: '2026-11-07', cents: 31247 });
+  state = addGoal(state, { name: 'AirPods', targetCents: 25000 });
+  // $62.49 to Goals each payday, every 2 weeks: $249.96 after Dec 19, so Jan 2 it is.
+  assert.equal(homePlan(state, '2026-11-07').goals[0].line, 'Ready in about 8 weeks (around Jan 2, 2027)');
+  assert.equal(homePlan(state, '2026-11-20').goals[0].line, 'Ready in about 7 weeks (around Jan 2, 2027)');
+});
+
+test('the goal date is never earlier than steady paychecks would really get there, nor a payday late', () => {
+  for (const cents of [4250, 18000, 31247, 99999]) {
+    for (const gap of [7, 14]) {
+      for (const goalsPercent of [10, 20, 35]) {
+        for (const target of [2500, 25000, 123456]) {
+          const split = { spend: 80 - goalsPercent, save: 20, goals: goalsPercent };
+          let state = setSplit(newState(), split);
+          state = addPaycheck(state, { date: addDays('2026-11-07', -gap), cents });
+          state = addPaycheck(state, { date: '2026-11-07', cents });
+          state = addGoal(state, { name: 'Thing', targetCents: target });
+          const line = homePlan(state, '2026-11-07').goals[0].line;
+          if (line === 'You can buy it!') continue;
+          const predicted = /around (\w+ \d+(?:, \d{4})?)\)/.exec(line)?.[1];
+          // Simulate the paydays that would really come.
+          let day = '2026-11-07';
+          let real = state;
+          while (balances(real).goals < target) {
+            day = addDays(day, gap);
+            real = addPaycheck(real, { date: day, cents });
+          }
+          const label = `${cents} every ${gap} days, ${goalsPercent}% to a ${target} goal`;
+          assert.equal(predicted, shortDateFrom(day, '2026-11-07'), label);
+        }
+      }
+    }
+  }
 });
