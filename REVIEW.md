@@ -299,3 +299,28 @@ is the same in every time zone.
   tooling the rules leave out.
 - Suggestion: Serve the folder with a ~15-line `node:http` static server bound to
   127.0.0.1 (still no dependencies). Remove the `@ts-check` line.
+
+---
+
+## Resolution (by the builder)
+
+Every fix below had a failing test first (unit tests in `tests/`, browser tests in
+`e2e/review.spec.js`), then the fix. Commit `7a7512a`. No existing test was changed.
+
+| Finding | Outcome | Test that failed first |
+|---|---|---|
+| U1 / C1 two tabs erase each other | Fixed. Other tabs reload on the `storage` event; `saveChecked` refuses to overwrite a save made elsewhere and the page shows the other tab's data with "Please try that again." | `saveChecked` unit tests; e2e "U1" (both) |
+| U2 / C2 tab in a note does nothing | Fixed. Whitespace runs become one space in notes and goal names; any other bad note shows a message under the note box. | unit "U2"; e2e "U2" |
+| C3 ids the loader rejects | Fixed. `nextId` reuses the lowest free number past 9 digits; record limits checked when adding; `saveChecked` never writes a state that would not load. | unit "C3" (four); e2e "C3" |
+| U3 / C6 only 20 entries | Fixed. "Show all N" button; dates more than 2 years ago ask to check the year. | e2e "U3"; unit `readPastDate` |
+| U4 / C4 weeks rounded twice | Fixed without changing any test: weeks now use the exact weekly amount (window pay × 7 × Goals% / 2800, in whole numbers). `averageWeeklyIncome` and the shown "$2.13 a week" are still rounded as their tests require. | unit "C4" (138 and 51 weeks) |
+| U5 / C8 "Log a paycheck" when paychecks exist | Fixed. New message when there are paychecks but none in the last 4 weeks. | unit `goalStatus`, `whatIfLine`, `whatIfWeekly`; e2e "U5" |
+| U7 / C5 future dates in backups | Fixed. Restore rejects dates more than one day after today. Loading saved data does not, so a changed device clock can't lock anyone out. | unit "U7"; e2e "U7" |
+| U8 / C7 damaged data unreachable | Fixed. "Download the unreadable data" button; up to 5 damaged copies kept, never overwritten. | unit "C7" (two); e2e "U8" |
+| U10 forms far down | Fixed. Order is now Your money, Log a paycheck, Log a purchase, Goals, What if?, Recent activity, Backup, Settings. | e2e "U10" |
+| U11 / C10 error twice, error far away | Fixed. The split hint hides while its alert shows; every form error sits under its own box. | e2e "U11" |
+| U12 Escape, focus after edit | Fixed. | e2e "U12" |
+| U12 "Log a paycheck first" wording | **Waiting for the owner.** The fix changes text that `e2e/purchase.spec.js` asserts, and CLAUDE.md says to ask before editing a test. | — |
+| U9 / C9 confirm, then refuse | **Waiting for the owner.** Checking before the confirm changes the dialog sequence `e2e/purchase.spec.js` follows; same reason. | — |
+| U6 no way to use goal money | Partly fixed: the Remove dialog now names the goal that gets the money next (e2e "U6"). **A "Bought it" action needs an owner decision**: it adds a new kind of record to the v1 state shape in SPEC.md and ticket 002. | e2e "U6" |
+| C11 Python and `@ts-check` | Not fixing. Ticket 008 asks for `python3 -m http.server` by name, and `// @ts-check` only lets an editor check the JSDoc types in plain JS (no build step, no TypeScript). | — |
