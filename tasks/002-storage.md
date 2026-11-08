@@ -2,7 +2,7 @@
 id: 002
 title: State, storage and backup validation
 depends_on: [001]
-status: todo
+status: done
 ---
 
 ## Goal
