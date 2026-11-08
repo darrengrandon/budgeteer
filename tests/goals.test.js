@@ -140,3 +140,36 @@ test('whatIf projects every goal for a trial split without touching the state', 
   assert.deepEqual(result.current.goals.map((g) => g.weeks), [11, 61]); // at 20%: 2000 a week
   assert.deepEqual(state, snapshot);
 });
+
+// Fresh-eyes review C4: weeks were worked out from a twice-rounded weekly amount.
+
+test('C4: weeks to go use the exact weekly amount; only the shown amount is rounded', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 4250 });
+  state = addGoal(state, { name: 'Phone', targetCents: 30000 });
+  const result = projectGoals(state, '2026-11-07');
+  // $42.50 / 4 = $10.625 a week, 20% = $2.125. ($300 - $8.50) / $2.125 = 137.2, so 138.
+  assert.equal(result.goals[0].weeks, 138);
+  assert.equal(result.weeklyCents, 213); // shown as "about $2.13 a week"
+});
+
+test('C4: second example from the review, a lower goal', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 4250 });
+  state = addPaycheck(state, { date: '2026-10-20', cents: 10000 });
+  state = addGoal(state, { name: 'Phone', targetCents: 30000 });
+  state = addGoal(state, { name: 'Tickets', targetCents: 8500 });
+  // Weekly to goals: $142.50 / 4 x 20% = $7.125. ($385 - $28.50) / $7.125 = 50.04, so 51.
+  assert.equal(projectGoals(state, '2026-11-07').goals[1].weeks, 51);
+});
+
+test('C4: goalProjections takes an exact fraction for the weekly amount', () => {
+  // $2.125 a week, given exactly as 2125 / 10 cents.
+  const [result] = goalProjections({ goalsBalanceCents: 850, goals: [{ id: 'g1', name: 'Phone', targetCents: 30000 }], weeklyCents: 2125, per: 10 });
+  assert.equal(result.weeks, 138);
+});
+
+test('C4: what-if trial weeks are exact too', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 4250 });
+  state = addGoal(state, { name: 'Phone', targetCents: 30000 });
+  // At 25%: $10.625 x 25% = $2.65625 a week. $291.50 / 2.65625 = 109.7, so 110.
+  assert.equal(whatIf(state, '2026-11-07', 25).trial.goals[0].weeks, 110);
+});

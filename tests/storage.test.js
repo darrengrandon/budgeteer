@@ -23,6 +23,9 @@ import {
   moveGoal,
   LIMITS,
   backupFileName,
+  DAMAGED_KEY,
+  readSaved,
+  saveChecked,
 } from '../src/storage.js';
 
 /** A fake localStorage that keeps items in a Map. */
@@ -455,4 +458,133 @@ test('moveGoal moves a goal up or down, and does nothing past the ends', () => {
 
 test('backupFileName puts the date in the name so backups sort in order', () => {
   assert.equal(backupFileName('2026-11-07'), 'budgeteer-backup-2026-11-07.json');
+});
+
+// Fresh-eyes review findings (ticket 009, REVIEW.md)
+
+test('C3: after restoring a backup with very high ids, new records still load again', () => {
+  const data = JSON.parse(exportBackup(sampleState()));
+  data.paychecks[1].id = 'p999999999';
+  data.purchases[0].id = 'b999999999';
+  data.goals[0].id = 'g999999999';
+  const restored = importBackup(JSON.stringify(data));
+  assert.equal(restored.ok, true);
+  let state = restored.state;
+  state = addPaycheck(state, { date: '2026-11-07', cents: 100 });
+  state = addPurchase(state, { date: '2026-11-07', cents: 10, note: '' });
+  state = addGoal(state, { name: 'Bike', targetCents: 100 });
+  const reloaded = importBackup(exportBackup(state));
+  assert.equal(reloaded.ok, true, reloaded.ok ? '' : reloaded.error);
+});
+
+test('C3: every kind of change gives a state that loads again', () => {
+  let state = emptyState({ spend: 34, save: 33, goals: 33 });
+  const steps = [
+    (s) => addPaycheck(s, { date: '2026-11-01', cents: 10001 }),
+    (s) => addPaycheck(s, { date: '2026-11-07', cents: 99 }),
+    (s) => addPurchase(s, { date: '2026-11-07', cents: 3400, note: '  Shoes  ' }),
+    (s) => addGoal(s, { name: 'Phone', targetCents: 30000 }),
+    (s) => addGoal(s, { name: 'Car', targetCents: 500000 }),
+    (s) => updateGoal(s, s.goals[0].id, { name: 'New phone', targetCents: 25000 }),
+    (s) => moveGoal(s, s.goals[1].id, -1),
+    (s) => setSplit(s, { spend: 10, save: 10, goals: 80 }),
+    (s) => removePurchase(s, s.purchases[0].id),
+    (s) => removeGoal(s, s.goals[0].id),
+    (s) => removePaycheck(s, s.paychecks[0].id),
+  ];
+  for (const [i, step] of steps.entries()) {
+    state = step(state);
+    const result = importBackup(exportBackup(state));
+    assert.equal(result.ok, true, `step ${i + 1}: ${result.ok ? '' : result.error}`);
+  }
+});
+
+test('C3: adding past the record limit is refused instead of saved and then rejected on load', () => {
+  const full = {
+    ...emptyState(),
+    paychecks: Array.from({ length: LIMITS.maxRecords }, (_, i) => ({ id: `p${i + 1}`, date: '2026-11-07', cents: 100, spend: 50, save: 30, goals: 20 })),
+  };
+  assert.throws(() => addPaycheck(full, { date: '2026-11-07', cents: 100 }), { name: 'RangeError', message: /too many/i });
+});
+
+test('U2: tabs and line breaks in a note or goal name become plain spaces', () => {
+  let state = addPaycheck(emptyState(), { date: '2026-11-07', cents: 1000 });
+  state = addPurchase(state, { date: '2026-11-07', cents: 100, note: 'Tab\there\nand\r\nthere' });
+  assert.equal(state.purchases[0].note, 'Tab here and there');
+  state = addGoal(state, { name: 'New\tphone', targetCents: 100 });
+  assert.equal(state.goals[0].name, 'New phone');
+  state = updateGoal(state, state.goals[0].id, { name: 'Old\nphone', targetCents: 100 });
+  assert.equal(state.goals[0].name, 'Old phone');
+  assert.throws(() => addPurchase(state, { date: '2026-11-07', cents: 1, note: 'a\u0000b' }), RangeError);
+});
+
+test('U7: restoring checks dates against today, with one day of slack for time zones', () => {
+  const data = JSON.parse(exportBackup(sampleState()));
+  data.paychecks[1].date = '2026-11-08';
+  assert.equal(importBackup(JSON.stringify(data), '2026-11-07').ok, true);
+
+  data.paychecks[1].date = '2026-11-09';
+  const paycheck = importBackup(JSON.stringify(data), '2026-11-07');
+  assert.equal(paycheck.ok, false);
+  assert.match(paycheck.error, /Paycheck 2's date is in the future/);
+
+  data.paychecks[1].date = '2026-11-06';
+  data.purchases[0].date = '2027-01-01';
+  const purchase = importBackup(JSON.stringify(data), '2026-11-07');
+  assert.equal(purchase.ok, false);
+  assert.match(purchase.error, /Purchase 1's date is in the future/);
+});
+
+test('C7: a second damaged load keeps the first damaged copy', () => {
+  const storage = fakeStorage({ [STORAGE_KEY]: 'first {' });
+  loadState(storage);
+  storage.setItem(STORAGE_KEY, 'second {');
+  loadState(storage);
+  assert.equal(storage.items.get(DAMAGED_KEY), 'first {');
+  assert.equal(storage.items.get(`${DAMAGED_KEY}.2`), 'second {');
+});
+
+test('C7: loading the same damaged data again does not pile up copies', () => {
+  const storage = fakeStorage({ [STORAGE_KEY]: 'same {' });
+  loadState(storage);
+  loadState(storage);
+  assert.deepEqual([...storage.items.keys()].sort(), [DAMAGED_KEY, STORAGE_KEY].sort());
+});
+
+test('U1: readSaved returns what is stored, null when empty, undefined when unreadable', () => {
+  assert.equal(readSaved(fakeStorage({ [STORAGE_KEY]: 'x' })), 'x');
+  assert.equal(readSaved(fakeStorage()), null);
+  assert.equal(readSaved(brokenStorage), undefined);
+  assert.equal(readSaved(null), undefined);
+});
+
+test('U1: saveChecked saves when nothing changed since this tab last looked', () => {
+  const storage = fakeStorage();
+  const first = saveChecked(storage, emptyState(), null);
+  assert.equal(first.status, 'saved');
+  assert.equal(storage.items.get(STORAGE_KEY), first.raw);
+  const second = saveChecked(storage, sampleState(), first.raw);
+  assert.equal(second.status, 'saved');
+  assert.equal(storage.items.get(STORAGE_KEY), exportBackup(sampleState()));
+});
+
+test('U1: saveChecked refuses to overwrite changes made in another tab', () => {
+  const storage = fakeStorage();
+  const mine = saveChecked(storage, emptyState(), null);
+  storage.setItem(STORAGE_KEY, exportBackup(sampleState())); // another tab saved
+  const result = saveChecked(storage, emptyState(), mine.raw);
+  assert.equal(result.status, 'changed');
+  assert.equal(storage.items.get(STORAGE_KEY), exportBackup(sampleState()));
+});
+
+test('C3: saveChecked never writes a state that would not load again', () => {
+  const storage = fakeStorage();
+  const broken = { ...emptyState(), purchases: [{ id: 'b1', date: '2026-11-07', cents: 100, note: '' }] }; // Spend below zero
+  assert.equal(saveChecked(storage, broken, null).status, 'invalid');
+  assert.equal(storage.items.has(STORAGE_KEY), false);
+});
+
+test('U1: saveChecked reports failure when storage is off', () => {
+  assert.equal(saveChecked(brokenStorage, emptyState(), null).status, 'failed');
+  assert.equal(saveChecked(null, emptyState(), null).status, 'failed');
 });

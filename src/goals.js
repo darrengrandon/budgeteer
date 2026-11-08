@@ -1,7 +1,9 @@
 // Goals: how Goals-bucket money is shared out, and how many weeks until each goal.
 // Pure functions. All money is integer cents.
 
-import { weeksToGoal, averageWeeklyIncome } from './budget.js';
+import { weeksToGoal, averageWeeklyIncome, incomeInWindow } from './budget.js';
+
+const WINDOW_DAYS = 28;
 import { balances } from './storage.js';
 
 /** @typedef {import('./storage.js').State} State */
@@ -40,17 +42,22 @@ export function weeklyGoalsCents(averageWeeklyCents, goalsPercent) {
 /**
  * Saved cents and weeks to go for each goal. Because goals fill top to bottom, a goal is
  * reached when the Goals bucket covers its target plus every target above it.
- * @param {{ goalsBalanceCents: number, goals: Goal[], weeklyCents: number }} args
+ * The weekly amount is weeklyCents / per, so an exact fraction (like $2.125) can be passed
+ * as whole numbers and nothing is rounded before the weeks are worked out.
+ * @param {{ goalsBalanceCents: number, goals: Goal[], weeklyCents: number, per?: number }} args
  * @returns {{ savedCents: number, weeks: number }[]}
  */
-export function goalProjections({ goalsBalanceCents, goals, weeklyCents }) {
+export function goalProjections({ goalsBalanceCents, goals, weeklyCents, per = 1 }) {
+  if (!Number.isSafeInteger(per) || per < 1) throw new RangeError(`per must be a whole number, at least 1, got ${per}`);
   const saved = allocateToGoals(goalsBalanceCents, goals);
   let targetSoFar = 0;
   return goals.map((goal, i) => {
     targetSoFar += goal.targetCents;
+    // Scale every amount by "per" so weeksToGoal sees whole numbers with the same ratio.
+    const savedSoFar = Math.min(goalsBalanceCents, targetSoFar);
     return {
       savedCents: saved[i],
-      weeks: weeksToGoal({ targetCents: targetSoFar, savedCents: goalsBalanceCents, weeklyCents }),
+      weeks: weeksToGoal({ targetCents: targetSoFar * per, savedCents: savedSoFar * per, weeklyCents }),
     };
   });
 }
@@ -64,14 +71,20 @@ export function goalProjections({ goalsBalanceCents, goals, weeklyCents }) {
  */
 export function projectGoals(state, todayISO, split = state.split) {
   const goalsBalanceCents = balances(state).goals;
-  const averageWeeklyCents = averageWeeklyIncome(state.paychecks, todayISO);
+  const averageWeeklyCents = averageWeeklyIncome(state.paychecks, todayISO, WINDOW_DAYS);
+  // Shown to the teen, rounded to the cent.
   const weeklyCents = weeklyGoalsCents(averageWeeklyCents, split.goals);
-  const projections = goalProjections({ goalsBalanceCents, goals: state.goals, weeklyCents });
+  // Used for the weeks, exactly: window pay x 7 / 28 days x Goals % / 100.
+  const exactWeekly = incomeInWindow(state.paychecks, todayISO, WINDOW_DAYS) * 7 * split.goals;
+  const projections = goalProjections({
+    goalsBalanceCents, goals: state.goals, weeklyCents: exactWeekly, per: WINDOW_DAYS * 100,
+  });
   const assigned = projections.reduce((sum, p) => sum + p.savedCents, 0);
   return {
     averageWeeklyCents,
     weeklyCents,
     goalsPercent: split.goals,
+    hasPaychecks: state.paychecks.length > 0,
     unassignedCents: goalsBalanceCents - assigned,
     goals: state.goals.map((goal, i) => ({ goal, ...projections[i] })),
   };

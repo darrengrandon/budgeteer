@@ -25,8 +25,11 @@ export function readAmount(text) {
   return { ok: true, cents };
 }
 
+/** Older than this is probably a typo in the year (1999 for 2026). */
+const OLDEST_DAYS = 730;
+
 /**
- * A date that is a real day, today or earlier.
+ * A date that is a real day, today or earlier, and not more than 2 years ago.
  * @param {string} text value of a date box, 'YYYY-MM-DD' or ''
  * @param {string} todayISO
  * @returns {{ ok: true, date: string } | { ok: false, error: string }}
@@ -36,6 +39,9 @@ export function readPastDate(text, todayISO) {
   if (!isISODate(text)) return { ok: false, error: 'Pick a real date.' };
   if (dayNumber(text) > dayNumber(todayISO)) {
     return { ok: false, error: "That date hasn't happened yet. Pick today or an earlier day." };
+  }
+  if (dayNumber(todayISO) - dayNumber(text) > OLDEST_DAYS) {
+    return { ok: false, error: "That's more than 2 years ago. Check the year." };
   }
   return { ok: true, date: text };
 }

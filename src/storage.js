@@ -1,7 +1,7 @@
 // App state: the records, the pure changes to them, saving to the device, and backups.
 // Balances are always calculated from the records, never stored. All money is integer cents.
 
-import { splitIncome, isISODate } from './budget.js';
+import { splitIncome, isISODate, dayNumber } from './budget.js';
 
 /**
  * @typedef {{ spend: number, save: number, goals: number }} Split
@@ -182,11 +182,20 @@ function readSplitFields(obj, where) {
 /**
  * Check an untrusted value and return a clean copy of the state, or a plain-words reason.
  * Rejects unknown fields, wrong types, impossible dates, bad splits, duplicate ids, and
- * purchases that spend more than ever went into Spend.
+ * purchases that spend more than ever went into Spend. With todayISO, it also rejects
+ * dates more than one day after today (one day of slack for time zones).
  * @param {unknown} data
+ * @param {string} [todayISO]
  * @returns {ValidationResult}
  */
-export function validateState(data) {
+export function validateState(data, todayISO) {
+  const latestDay = todayISO === undefined ? Infinity : dayNumber(todayISO) + 1;
+  /** @param {unknown} value @param {string} where */
+  const readRecordDate = (value, where) => {
+    const date = readDate(value, where);
+    if (dayNumber(date) > latestDay) throw new RangeError(`${where} is in the future.`);
+    return date;
+  };
   try {
     const top = readObject(data, ['version', 'split', 'paychecks', 'purchases', 'goals'], 'The backup');
     if (top.version !== 1) throw new RangeError('The backup is from a different version of Budgeteer.');
@@ -199,7 +208,7 @@ export function validateState(data) {
       const p = readObject(item, ['id', 'date', 'cents', 'spend', 'save', 'goals'], where);
       return {
         id: readId(p.id, ID_PATTERN.paycheck, paycheckIds, where),
-        date: readDate(p.date, `${where}'s date`),
+        date: readRecordDate(p.date, `${where}'s date`),
         cents: readCents(p.cents, `${where}'s amount`),
         ...readSplitFields(p, `${where}'s split`),
       };
@@ -211,7 +220,7 @@ export function validateState(data) {
       const b = readObject(item, ['id', 'date', 'cents', 'note'], where);
       return {
         id: readId(b.id, ID_PATTERN.purchase, purchaseIds, where),
-        date: readDate(b.date, `${where}'s date`),
+        date: readRecordDate(b.date, `${where}'s date`),
         cents: readCents(b.cents, `${where}'s amount`),
         note: readText(b.note, `${where}'s note`, LIMITS.maxNoteLength),
       };
@@ -280,18 +289,48 @@ export function paycheckParts(paycheck) {
   return { spend: parts.spend, save: parts.save, goals: parts.goals };
 }
 
+/** Ids have at most 9 digits (see ID_PATTERN). */
+const MAX_ID_NUMBER = 999_999_999;
+
 /**
- * The next free id like "p4" for a list of records.
+ * The next free id like "p4" for a list of records: one more than the highest, or, if that
+ * would be too long (only possible after restoring a hand-edited backup), the lowest unused.
  * @param {'p' | 'b' | 'g'} prefix
  * @param {{ id: string }[]} records
  * @returns {string}
  */
 export function nextId(prefix, records) {
+  const used = new Set();
   let max = 0;
   for (const { id } of records) {
-    if (id.startsWith(prefix)) max = Math.max(max, Number(id.slice(1)) || 0);
+    if (!id.startsWith(prefix)) continue;
+    const n = Number(id.slice(1)) || 0;
+    used.add(n);
+    max = Math.max(max, n);
   }
-  return `${prefix}${max + 1}`;
+  if (max < MAX_ID_NUMBER) return `${prefix}${max + 1}`;
+  let n = 1;
+  while (used.has(n)) n += 1;
+  return `${prefix}${n}`;
+}
+
+/**
+ * Turn tabs, line breaks and runs of spaces into single spaces (pasted text often has them).
+ * @param {unknown} text
+ * @returns {unknown}
+ */
+function oneLine(text) {
+  return typeof text === 'string' ? text.replace(/\s+/g, ' ') : text;
+}
+
+/**
+ * @param {unknown[]} list
+ * @param {string} what
+ */
+function checkRoomFor(list, what) {
+  if (list.length >= LIMITS.maxRecords) {
+    throw new RangeError(`You have too many ${what} logged. Remove some old ones first.`);
+  }
 }
 
 /**
@@ -301,6 +340,7 @@ export function nextId(prefix, records) {
  * @returns {State}
  */
 export function addPaycheck(state, { date, cents }) {
+  checkRoomFor(state.paychecks, 'paychecks');
   const record = {
     id: nextId('p', state.paychecks),
     date: readDate(date, 'The date'),
@@ -330,11 +370,12 @@ export class OverspendError extends RangeError {
  * @returns {State}
  */
 export function addPurchase(state, { date, cents, note }) {
+  checkRoomFor(state.purchases, 'purchases');
   const record = {
     id: nextId('b', state.purchases),
     date: readDate(date, 'The date'),
     cents: readCents(cents, 'The amount'),
-    note: readText(note, 'The note', LIMITS.maxNoteLength).trim(),
+    note: readText(oneLine(note), 'The note', LIMITS.maxNoteLength).trim(),
   };
   const available = balances(state).spend;
   if (record.cents > available) throw new OverspendError(available);
@@ -400,7 +441,7 @@ export function addGoal(state, { name, targetCents }) {
   if (state.goals.length >= LIMITS.maxGoals) throw new RangeError(`You can have up to ${LIMITS.maxGoals} goals.`);
   const record = {
     id: nextId('g', state.goals),
-    name: readName(name, 'The name').trim(),
+    name: readName(oneLine(name), 'The name').trim(),
     targetCents: readCents(targetCents, 'The target'),
   };
   return { ...state, goals: [...state.goals, record] };
@@ -415,7 +456,7 @@ export function addGoal(state, { name, targetCents }) {
  */
 export function updateGoal(state, id, { name, targetCents }) {
   const index = goalIndex(state, id);
-  const record = { id, name: readName(name, 'The name').trim(), targetCents: readCents(targetCents, 'The target') };
+  const record = { id, name: readName(oneLine(name), 'The name').trim(), targetCents: readCents(targetCents, 'The target') };
   return { ...state, goals: state.goals.map((g, i) => (i === index ? record : g)) };
 }
 
@@ -493,11 +534,7 @@ export function loadState(storage) {
 
   const result = importBackup(raw);
   if (result.ok) return { state: result.state, warning: null };
-  try {
-    storage.setItem(DAMAGED_KEY, raw);
-  } catch {
-    // Nothing more we can do; the app still runs from memory.
-  }
+  keepDamagedCopy(storage, raw);
   return { state: null, warning: DAMAGED_WARNING };
 }
 
@@ -531,9 +568,10 @@ export function exportBackup(state) {
 
 /**
  * @param {unknown} text
+ * @param {string} [todayISO] when given, dates more than a day after it are rejected
  * @returns {ValidationResult}
  */
-export function importBackup(text) {
+export function importBackup(text, todayISO) {
   if (typeof text !== 'string') return { ok: false, error: "That isn't a Budgeteer backup file." };
   if (text.length > LIMITS.maxBackupChars) return { ok: false, error: 'That file is too big to be a Budgeteer backup.' };
   let data;
@@ -542,7 +580,7 @@ export function importBackup(text) {
   } catch {
     return { ok: false, error: "That file isn't a Budgeteer backup, or it's damaged." };
   }
-  return validateState(data);
+  return validateState(data, todayISO);
 }
 
 /**
@@ -552,4 +590,69 @@ export function importBackup(text) {
  */
 export function backupFileName(todayISO) {
   return `budgeteer-backup-${todayISO}.json`;
+}
+
+/** Up to this many damaged copies are kept. */
+const DAMAGED_SLOTS = [DAMAGED_KEY, `${DAMAGED_KEY}.2`, `${DAMAGED_KEY}.3`, `${DAMAGED_KEY}.4`, `${DAMAGED_KEY}.5`];
+
+/**
+ * Put unreadable saved data aside without overwriting an earlier copy. Never throws.
+ * @param {StorageLike} storage
+ * @param {string} raw
+ */
+function keepDamagedCopy(storage, raw) {
+  try {
+    for (const key of DAMAGED_SLOTS) {
+      const existing = storage.getItem(key);
+      if (existing === raw) return;
+      if (existing === null) {
+        storage.setItem(key, raw);
+        return;
+      }
+    }
+    storage.setItem(DAMAGED_SLOTS[DAMAGED_SLOTS.length - 1], raw);
+  } catch {
+    // Nothing more we can do; the app still runs from memory.
+  }
+}
+
+/**
+ * The saved text exactly as stored: null if nothing is saved, undefined if storage can't be read.
+ * @param {StorageLike | null | undefined} storage
+ * @returns {string | null | undefined}
+ */
+export function readSaved(storage) {
+  if (!storage) return undefined;
+  try {
+    return storage.getItem(STORAGE_KEY);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Save, but only if it is safe to:
+ * - 'invalid': the state would not load again, so nothing is written.
+ * - 'changed': another tab saved since this one last read or wrote (expectedRaw), so
+ *   nothing is written; reload and try again.
+ * - 'failed': storage is off or full.
+ * - 'saved': written; raw is the new saved text.
+ * Pass expectedRaw as undefined to skip the other-tab check.
+ * @param {StorageLike | null | undefined} storage
+ * @param {State} state
+ * @param {string | null | undefined} expectedRaw
+ * @returns {{ status: 'saved', raw: string } | { status: 'invalid', error: string } | { status: 'changed' | 'failed' }}
+ */
+export function saveChecked(storage, state, expectedRaw) {
+  const check = validateState(state);
+  if (!check.ok) return { status: 'invalid', error: check.error };
+  if (!storage) return { status: 'failed' };
+  try {
+    if (expectedRaw !== undefined && storage.getItem(STORAGE_KEY) !== expectedRaw) return { status: 'changed' };
+    const raw = exportBackup(state);
+    storage.setItem(STORAGE_KEY, raw);
+    return { status: 'saved', raw };
+  } catch {
+    return { status: 'failed' };
+  }
 }

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine,
+  paycheckSentence, splitTotalHint, overspendMessage, purchaseSentence, shortDate, goalStatus, goalProgress, unassignedNote, whatIfLine, whatIfWeekly,
 } from '../src/words.js';
 
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
@@ -114,4 +114,22 @@ test('whatIfLine for finished goals, no pay, and 0% to Goals', () => {
   assert.equal(whatIfLine({ ...base, done: true, averageWeeklyCents: 0, trialGoalsPercent: 20 }), 'Phone: done already');
   assert.equal(whatIfLine({ ...base, done: false, averageWeeklyCents: 0, trialGoalsPercent: 20 }), 'Phone: log a paycheck to see a date');
   assert.equal(whatIfLine({ ...base, done: false, averageWeeklyCents: 5000, trialGoalsPercent: 0 }), "Phone: never, with 0% to Goals");
+});
+
+// Fresh-eyes review C8 / U5: paychecks exist, but none in the last 4 weeks.
+
+test('goalStatus when the only paychecks are older than 4 weeks', () => {
+  const status = goalStatus({ savedCents: 10000, targetCents: 30000, weeks: Infinity, averageWeeklyCents: 0, goalsPercent: 20, hasPaychecks: true });
+  assert.equal(status, "No paychecks in the last 4 weeks, so there's no estimate yet. Log your next one to see the weeks to go.");
+});
+
+test('whatIfLine when the only paychecks are older than 4 weeks', () => {
+  const line = whatIfLine({ name: 'Phone', done: false, trialWeeks: Infinity, currentWeeks: Infinity, averageWeeklyCents: 0, trialGoalsPercent: 20, hasPaychecks: true });
+  assert.equal(line, 'Phone: no paychecks in the last 4 weeks');
+});
+
+test('whatIfWeekly says what goes into Goals each week, or why it cannot', () => {
+  assert.equal(whatIfWeekly({ averageWeeklyCents: 5000, weeklyCents: 1000, hasPaychecks: true }), "That's about $10.00 a week into Goals.");
+  assert.equal(whatIfWeekly({ averageWeeklyCents: 0, weeklyCents: 0, hasPaychecks: false }), 'Log a paycheck to see dates.');
+  assert.equal(whatIfWeekly({ averageWeeklyCents: 0, weeklyCents: 0, hasPaychecks: true }), 'No paychecks in the last 4 weeks, so there are no estimates yet.');
 });

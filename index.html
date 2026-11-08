@@ -19,7 +19,12 @@
   </header>
 
   <main>
-    <p id="notice" class="notice" role="status" hidden></p>
+    <div id="notice" class="notice" role="status" hidden>
+      <p id="notice-text"></p>
+      <div class="actions">
+        <button type="button" id="notice-download" hidden>Download the unreadable data</button>
+      </div>
+    </div>
     <noscript><p class="notice">Budgeteer needs JavaScript turned on to work.</p></noscript>
 
     <!-- Choosing the split: shown on first run, and when changing it later. -->
@@ -90,6 +95,62 @@
         </ul>
       </section>
 
+      <section class="card" aria-labelledby="paycheck-title">
+        <h2 id="paycheck-title">Log a paycheck</h2>
+        <form id="paycheck-form" novalidate>
+          <div class="field">
+            <label for="paycheck-amount">Take-home amount</label>
+            <div class="money-input">
+              <span aria-hidden="true">$</span>
+              <input id="paycheck-amount" name="amount" type="text" inputmode="decimal" autocomplete="off"
+                     aria-describedby="paycheck-amount-help paycheck-amount-error">
+            </div>
+            <small id="paycheck-amount-help">What actually landed in your pocket or account after taxes.</small>
+            <p id="paycheck-amount-error" class="error" role="alert"></p>
+          </div>
+          <div class="field">
+            <label for="paycheck-date">Date paid</label>
+            <input id="paycheck-date" name="date" type="date" required aria-describedby="paycheck-date-error">
+            <p id="paycheck-date-error" class="error" role="alert"></p>
+          </div>
+          <div class="actions">
+            <button type="submit" class="primary">Add paycheck</button>
+          </div>
+        </form>
+        <p id="paycheck-result" class="result" role="status"></p>
+      </section>
+
+      <section class="card" aria-labelledby="purchase-title">
+        <h2 id="purchase-title">Log a purchase</h2>
+        <p class="hint" id="purchase-available"></p>
+        <form id="purchase-form" novalidate>
+          <div class="field">
+            <label for="purchase-amount">Amount spent</label>
+            <div class="money-input">
+              <span aria-hidden="true">$</span>
+              <input id="purchase-amount" name="amount" type="text" inputmode="decimal" autocomplete="off"
+                     aria-describedby="purchase-available purchase-amount-error">
+            </div>
+            <p id="purchase-amount-error" class="error" role="alert"></p>
+          </div>
+          <div class="field">
+            <label for="purchase-note">What was it for? <span class="unit">(optional)</span></label>
+            <input id="purchase-note" name="note" type="text" maxlength="80" autocomplete="off"
+                   aria-describedby="purchase-note-error">
+            <p id="purchase-note-error" class="error" role="alert"></p>
+          </div>
+          <div class="field">
+            <label for="purchase-date">Date</label>
+            <input id="purchase-date" name="date" type="date" required aria-describedby="purchase-date-error">
+            <p id="purchase-date-error" class="error" role="alert"></p>
+          </div>
+          <div class="actions">
+            <button type="submit" class="primary">Log purchase</button>
+          </div>
+        </form>
+        <p id="purchase-result" class="result" role="status"></p>
+      </section>
+
       <section class="card" aria-labelledby="goals-title">
         <h2 id="goals-title" tabindex="-1">Goals</h2>
         <p id="goals-empty" class="hint">No goals yet. What are you saving up for?</p>
@@ -104,17 +165,19 @@
           <h3 id="goal-form-title">Add a goal</h3>
           <div class="field">
             <label for="goal-name">What are you saving for?</label>
-            <input id="goal-name" name="name" type="text" maxlength="40" autocomplete="off" aria-describedby="goal-error">
+            <input id="goal-name" name="name" type="text" maxlength="40" autocomplete="off"
+                   aria-describedby="goal-name-error">
+            <p id="goal-name-error" class="error" role="alert"></p>
           </div>
           <div class="field">
             <label for="goal-target">How much does it cost?</label>
             <div class="money-input">
               <span aria-hidden="true">$</span>
               <input id="goal-target" name="target" type="text" inputmode="decimal" autocomplete="off"
-                     aria-describedby="goal-error">
+                     aria-describedby="goal-target-error">
             </div>
+            <p id="goal-target-error" class="error" role="alert"></p>
           </div>
-          <p id="goal-error" class="error" role="alert"></p>
           <div class="actions">
             <button type="submit" id="goal-submit" class="primary">Add goal</button>
             <button type="button" id="goal-cancel" hidden>Cancel</button>
@@ -145,63 +208,16 @@
         <p id="whatif-result" class="result" role="status"></p>
       </section>
 
-      <section class="card" aria-labelledby="paycheck-title">
-        <h2 id="paycheck-title">Log a paycheck</h2>
-        <form id="paycheck-form" novalidate>
-          <div class="field">
-            <label for="paycheck-amount">Take-home amount</label>
-            <div class="money-input">
-              <span aria-hidden="true">$</span>
-              <input id="paycheck-amount" name="amount" type="text" inputmode="decimal" autocomplete="off"
-                     aria-describedby="paycheck-amount-help paycheck-error">
-            </div>
-            <small id="paycheck-amount-help">What actually landed in your pocket or account after taxes.</small>
-          </div>
-          <div class="field">
-            <label for="paycheck-date">Date paid</label>
-            <input id="paycheck-date" name="date" type="date" required aria-describedby="paycheck-error">
-          </div>
-          <p id="paycheck-error" class="error" role="alert"></p>
-          <div class="actions">
-            <button type="submit" class="primary">Add paycheck</button>
-          </div>
-        </form>
-        <p id="paycheck-result" class="result" role="status"></p>
-      </section>
-
-      <section class="card" aria-labelledby="purchase-title">
-        <h2 id="purchase-title">Log a purchase</h2>
-        <p class="hint" id="purchase-available"></p>
-        <form id="purchase-form" novalidate>
-          <div class="field">
-            <label for="purchase-amount">Amount spent</label>
-            <div class="money-input">
-              <span aria-hidden="true">$</span>
-              <input id="purchase-amount" name="amount" type="text" inputmode="decimal" autocomplete="off"
-                     aria-describedby="purchase-available purchase-error">
-            </div>
-          </div>
-          <div class="field">
-            <label for="purchase-note">What was it for? <span class="unit">(optional)</span></label>
-            <input id="purchase-note" name="note" type="text" maxlength="80" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="purchase-date">Date</label>
-            <input id="purchase-date" name="date" type="date" required aria-describedby="purchase-error">
-          </div>
-          <p id="purchase-error" class="error" role="alert"></p>
-          <div class="actions">
-            <button type="submit" class="primary">Log purchase</button>
-          </div>
-        </form>
-        <p id="purchase-result" class="result" role="status"></p>
-      </section>
-
       <section class="card" aria-labelledby="history-title">
         <h2 id="history-title" tabindex="-1">Recent activity</h2>
         <p id="history-empty" class="hint">Nothing yet. Paychecks and purchases you log will show up here.</p>
         <ul id="history" class="history"></ul>
-        <p id="history-more" class="hint" hidden></p>
+        <div id="history-more" hidden>
+          <p id="history-more-text" class="hint"></p>
+          <div class="actions">
+            <button type="button" id="history-toggle"></button>
+          </div>
+        </div>
         <p id="history-error" class="error" role="alert"></p>
         <p id="history-result" class="result" role="status"></p>
       </section>

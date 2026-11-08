@@ -65,12 +65,17 @@ export function shortDate(iso) {
 
 /**
  * The line under each goal's progress bar.
- * @param {{ savedCents: number, targetCents: number, weeks: number, averageWeeklyCents: number, goalsPercent: number }} args
+ * @param {{ savedCents: number, targetCents: number, weeks: number, averageWeeklyCents: number, goalsPercent: number,
+ *   hasPaychecks?: boolean }} args hasPaychecks: any paycheck at all, even older than 4 weeks
  * @returns {string}
  */
-export function goalStatus({ savedCents, targetCents, weeks, averageWeeklyCents, goalsPercent }) {
+export function goalStatus({ savedCents, targetCents, weeks, averageWeeklyCents, goalsPercent, hasPaychecks = false }) {
   if (savedCents >= targetCents) return 'Done! You saved enough for this.';
-  if (averageWeeklyCents <= 0) return 'Log a paycheck to see a date.';
+  if (averageWeeklyCents <= 0) {
+    return hasPaychecks
+      ? "No paychecks in the last 4 weeks, so there's no estimate yet. Log your next one to see the weeks to go."
+      : 'Log a paycheck to see a date.';
+  }
   if (goalsPercent === 0) return "Your split puts 0% into Goals, so this won't fill up. Change your split to get here.";
   if (!Number.isFinite(weeks)) return 'Your recent pay is too small to give a date yet.';
   if (weeks === 1) return 'About 1 week to go.';
@@ -116,12 +121,14 @@ export function unassignedNote(unassignedCents, hasGoals) {
 /**
  * One line per goal under the what-if slider, like "Phone: about 9 weeks (2 weeks sooner)".
  * @param {{ name: string, done: boolean, trialWeeks: number, currentWeeks: number,
- *   averageWeeklyCents: number, trialGoalsPercent: number }} args
+ *   averageWeeklyCents: number, trialGoalsPercent: number, hasPaychecks?: boolean }} args
  * @returns {string}
  */
-export function whatIfLine({ name, done, trialWeeks, currentWeeks, averageWeeklyCents, trialGoalsPercent }) {
+export function whatIfLine({ name, done, trialWeeks, currentWeeks, averageWeeklyCents, trialGoalsPercent, hasPaychecks = false }) {
   if (done) return `${name}: done already`;
-  if (averageWeeklyCents <= 0) return `${name}: log a paycheck to see a date`;
+  if (averageWeeklyCents <= 0) {
+    return hasPaychecks ? `${name}: no paychecks in the last 4 weeks` : `${name}: log a paycheck to see a date`;
+  }
   if (trialGoalsPercent === 0) return `${name}: never, with 0% to Goals`;
   if (!Number.isFinite(trialWeeks)) return `${name}: no date yet`;
 
@@ -134,4 +141,14 @@ export function whatIfLine({ name, done, trialWeeks, currentWeeks, averageWeekly
     else compare = ' (same as now)';
   }
   return `${name}: about ${weeks(trialWeeks)}${compare}`;
+}
+
+/**
+ * The line under the what-if split: how much a week goes into Goals, or why there is no estimate.
+ * @param {{ averageWeeklyCents: number, weeklyCents: number, hasPaychecks: boolean }} args
+ * @returns {string}
+ */
+export function whatIfWeekly({ averageWeeklyCents, weeklyCents, hasPaychecks }) {
+  if (averageWeeklyCents > 0) return `That's about ${formatCents(weeklyCents)} a week into Goals.`;
+  return hasPaychecks ? 'No paychecks in the last 4 weeks, so there are no estimates yet.' : 'Log a paycheck to see dates.';
 }

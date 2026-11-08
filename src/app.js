@@ -4,9 +4,12 @@
 import {
   DEFAULT_SPLIT,
   NO_STORAGE_WARNING,
+  DAMAGED_WARNING,
+  STORAGE_KEY,
   emptyState,
   loadState,
-  saveState,
+  readSaved,
+  saveChecked,
   addPaycheck,
   addPurchase,
   removePaycheck,
@@ -38,6 +41,7 @@ import {
   goalProgress,
   unassignedNote,
   whatIfLine,
+  whatIfWeekly,
 } from './words.js';
 import { readAmount, readPastDate, readSplitInputs, toPercent } from './forms.js';
 
@@ -86,17 +90,48 @@ function clearError(errorId, inputs) {
   for (const input of inputs) input.removeAttribute('aria-invalid');
 }
 
+/**
+ * Clear the error messages inside one form (each box has its own, right under it).
+ * @param {HTMLElement} form
+ */
+function clearFormErrors(form) {
+  for (const node of form.querySelectorAll('.error')) node.textContent = '';
+  for (const node of form.querySelectorAll('[aria-invalid]')) node.removeAttribute('aria-invalid');
+}
+
 /** Clear every "done" and error message, so only the newest one is on screen. */
 function clearMessages() {
   for (const node of document.querySelectorAll('.result, .error')) node.textContent = '';
   for (const node of document.querySelectorAll('[aria-invalid]')) node.removeAttribute('aria-invalid');
+  el('split-hint').hidden = false;
 }
 
-/** @param {string | null} text */
-function showNotice(text) {
-  const notice = el('notice');
-  notice.textContent = text ?? '';
-  notice.hidden = !text;
+/**
+ * Show or hide the message at the top of the page.
+ * @param {string | null} text
+ * @param {boolean} [offerDownload] show "Download the unreadable data"
+ */
+function showNotice(text, offerDownload = false) {
+  el('notice-text').textContent = text ?? '';
+  el('notice-download').hidden = !offerDownload;
+  el('notice').hidden = !text;
+}
+
+/**
+ * Hand the teen a file to save.
+ * @param {string} fileName
+ * @param {string} text
+ * @param {string} type
+ */
+function downloadText(fileName, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 // ---------------------------------------------------------------------------
@@ -111,23 +146,61 @@ function deviceStorage() {
   }
 }
 
+const CHANGED_ELSEWHERE = 'Budgeteer was changed in another tab, so this page has been updated. Please try that again.';
+
 const storage = deviceStorage();
+/** The saved text as this tab last read or wrote it, to notice saves from other tabs. */
+let lastSaved = readSaved(storage);
 const loaded = loadState(storage);
 /** @type {State | null} */
 let state = loaded.state;
+/** Saved text that couldn't be read, kept so the teen can download it and get help. */
+const unreadable = loaded.warning === DAMAGED_WARNING && typeof lastSaved === 'string' ? lastSaved : null;
 /** True while the teen is changing an existing split. */
 let editingSplit = false;
-showNotice(loaded.warning);
+showNotice(loaded.warning, unreadable !== null);
+
+el('notice-download').addEventListener('click', () => {
+  if (unreadable !== null) downloadText(`budgeteer-unreadable-${localISODate()}.txt`, unreadable, 'text/plain');
+});
 
 /**
- * Replace the state, save it, and redraw.
+ * Save the new state and redraw. Returns false, and changes nothing, if another tab saved
+ * first (this tab then shows the other tab's data) or if the state would not load again.
  * @param {State} next
+ * @returns {boolean}
  */
 function commit(next) {
+  const result = saveChecked(storage, next, lastSaved);
+  if (result.status === 'changed') {
+    reloadFromStorage();
+    showNotice(CHANGED_ELSEWHERE);
+    return false;
+  }
+  if (result.status === 'invalid') {
+    showNotice(`Something went wrong, so that wasn't saved. ${result.error}`);
+    return false;
+  }
   state = next;
-  if (!saveState(storage, state)) showNotice(NO_STORAGE_WARNING);
+  if (result.status === 'saved') lastSaved = result.raw;
+  else showNotice(NO_STORAGE_WARNING);
+  render();
+  return true;
+}
+
+/** Pick up what another tab saved. */
+function reloadFromStorage() {
+  lastSaved = readSaved(storage);
+  const fresh = loadState(storage);
+  // Adopt it if it loaded, or if the other tab cleared everything. Keep ours if it can't be read.
+  if (fresh.state || fresh.warning === null) state = fresh.state;
+  if (state && editingGoalId && !state.goals.some((g) => g.id === editingGoalId)) resetGoalForm();
   render();
 }
+
+window.addEventListener('storage', (event) => {
+  if (event.key === STORAGE_KEY || event.key === null) reloadFromStorage();
+});
 
 // ---------------------------------------------------------------------------
 // Split form (first run and "Change my split")
@@ -164,16 +237,21 @@ function fillSplit(split) {
 for (const input of allSplitInputs) {
   input.addEventListener('input', () => {
     clearError('split-error', allSplitInputs);
+    el('split-hint').hidden = false;
     updateSplitHint();
   });
 }
 
 el('split-preset').addEventListener('click', () => fillSplit(DEFAULT_SPLIT));
 
-el('split-cancel').addEventListener('click', () => {
+function cancelSplitChange() {
   editingSplit = false;
   render();
   el('change-split').focus();
+}
+el('split-cancel').addEventListener('click', cancelSplitChange);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && editingSplit) cancelSplitChange();
 });
 
 el('change-split').addEventListener('click', () => {
@@ -188,14 +266,16 @@ el('split-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const result = readSplitInputs(splitValues());
   if (!result.ok) {
+    el('split-hint').hidden = true; // the alert says the same thing; show it once
     showError('split-error', result.error, allSplitInputs);
     return;
   }
   clearError('split-error', allSplitInputs);
   const firstRun = state === null;
+  if (!commit(state === null ? emptyState(result.split) : setSplit(state, result.split))) return;
   editingSplit = false;
   trialGoals = null;
-  commit(state === null ? emptyState(result.split) : setSplit(state, result.split));
+  render();
   if (firstRun) {
     inputEl('paycheck-amount').focus();
   } else {
@@ -215,13 +295,14 @@ const paycheckDate = inputEl('paycheck-date');
  * @param {HTMLInputElement} input
  */
 function resetDate(input) {
-  const today = localISODate();
-  input.value = today;
-  input.max = today;
+  const now = new Date();
+  input.value = localISODate(now);
+  input.max = localISODate(now);
+  input.min = localISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 730));
 }
 
 for (const input of [paycheckAmount, paycheckDate]) {
-  input.addEventListener('input', () => clearError('paycheck-error', [paycheckAmount, paycheckDate]));
+  input.addEventListener('input', () => clearFormErrors(el('paycheck-form')));
 }
 
 el('paycheck-form').addEventListener('submit', (event) => {
@@ -231,18 +312,25 @@ el('paycheck-form').addEventListener('submit', (event) => {
 
   const amount = readAmount(paycheckAmount.value);
   if (!amount.ok) {
-    showError('paycheck-error', amount.error, [paycheckAmount]);
+    showError('paycheck-amount-error', amount.error, [paycheckAmount]);
     return;
   }
   const date = readPastDate(paycheckDate.value, localISODate());
   if (!date.ok) {
-    showError('paycheck-error', date.error, [paycheckDate]);
+    showError('paycheck-date-error', date.error, [paycheckDate]);
     return;
   }
 
-  const next = addPaycheck(state, { date: date.date, cents: amount.cents });
+  let next;
+  try {
+    next = addPaycheck(state, { date: date.date, cents: amount.cents });
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    showError('paycheck-amount-error', error.message, [paycheckAmount]);
+    return;
+  }
   const added = next.paychecks[next.paychecks.length - 1];
-  commit(next);
+  if (!commit(next)) return;
   el('paycheck-result').textContent = `Nice. ${paycheckSentence(added.cents, paycheckParts(added))}`;
   paycheckAmount.value = '';
   resetDate(paycheckDate);
@@ -256,7 +344,7 @@ const purchaseNote = inputEl('purchase-note');
 const purchaseDate = inputEl('purchase-date');
 
 for (const input of [purchaseAmount, purchaseNote, purchaseDate]) {
-  input.addEventListener('input', () => clearError('purchase-error', [purchaseAmount, purchaseDate]));
+  input.addEventListener('input', () => clearFormErrors(el('purchase-form')));
 }
 
 el('purchase-form').addEventListener('submit', (event) => {
@@ -266,12 +354,12 @@ el('purchase-form').addEventListener('submit', (event) => {
 
   const amount = readAmount(purchaseAmount.value);
   if (!amount.ok) {
-    showError('purchase-error', amount.error, [purchaseAmount]);
+    showError('purchase-amount-error', amount.error, [purchaseAmount]);
     return;
   }
   const date = readPastDate(purchaseDate.value, localISODate());
   if (!date.ok) {
-    showError('purchase-error', date.error, [purchaseDate]);
+    showError('purchase-date-error', date.error, [purchaseDate]);
     return;
   }
 
@@ -279,11 +367,16 @@ el('purchase-form').addEventListener('submit', (event) => {
   try {
     next = addPurchase(state, { date: date.date, cents: amount.cents, note: purchaseNote.value });
   } catch (error) {
-    if (!(error instanceof OverspendError)) throw error;
-    showError('purchase-error', overspendMessage(error.availableCents), [purchaseAmount]);
+    if (error instanceof OverspendError) {
+      showError('purchase-amount-error', overspendMessage(error.availableCents), [purchaseAmount]);
+    } else if (error instanceof RangeError) {
+      showError('purchase-note-error', error.message, [purchaseNote]);
+    } else {
+      throw error;
+    }
     return;
   }
-  commit(next);
+  if (!commit(next)) return;
   el('purchase-result').textContent = purchaseSentence(amount.cents, balances(next).spend);
   purchaseAmount.value = '';
   purchaseNote.value = '';
@@ -299,7 +392,7 @@ const goalTarget = inputEl('goal-target');
 let editingGoalId = /** @type {string | null} */ (null);
 
 for (const input of [goalName, goalTarget]) {
-  input.addEventListener('input', () => clearError('goal-error', [goalName, goalTarget]));
+  input.addEventListener('input', () => clearFormErrors(el('goal-form')));
 }
 
 /** Put the goal form back to "Add a goal". */
@@ -325,12 +418,12 @@ el('goal-form').addEventListener('submit', (event) => {
 
   const name = goalName.value.trim();
   if (name === '') {
-    showError('goal-error', 'Give your goal a name, like "New phone".', [goalName]);
+    showError('goal-name-error', 'Give your goal a name, like "New phone".', [goalName]);
     return;
   }
   const target = readAmount(goalTarget.value);
   if (!target.ok) {
-    showError('goal-error', target.error, [goalTarget]);
+    showError('goal-target-error', target.error, [goalTarget]);
     return;
   }
 
@@ -341,13 +434,17 @@ el('goal-form').addEventListener('submit', (event) => {
       : addGoal(state, { name, targetCents: target.cents });
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
-    showError('goal-error', error.message, [goalName]);
+    showError('goal-name-error', error.message, [goalName]);
     return;
   }
-  const wasEditing = editingGoalId !== null;
-  commit(next);
+  const editedId = editingGoalId;
+  if (!commit(next)) return;
   resetGoalForm();
-  el('goal-list-result').textContent = wasEditing ? `Saved changes to "${name}".` : `Added "${name}".`;
+  el('goal-list-result').textContent = editedId ? `Saved changes to "${name}".` : `Added "${name}".`;
+  if (editedId) {
+    const editButton = document.querySelector(`#goal-list button[data-id="${editedId}"][data-action="edit"]`);
+    if (editButton instanceof HTMLElement) editButton.focus();
+  }
 });
 
 el('goal-list').addEventListener('click', (event) => {
@@ -359,7 +456,7 @@ el('goal-list').addEventListener('click', (event) => {
   clearMessages();
 
   if (action === 'up' || action === 'down') {
-    commit(moveGoal(state, id, action === 'up' ? -1 : 1));
+    if (!commit(moveGoal(state, id, action === 'up' ? -1 : 1))) return;
     // Keep focus on the goal that moved, so pressing the button again keeps moving it.
     const same = document.querySelector(`#goal-list button[data-id="${id}"][data-action="${action}"]`);
     const other = document.querySelector(`#goal-list button[data-id="${id}"][data-action="${action === 'up' ? 'down' : 'up'}"]`);
@@ -374,8 +471,10 @@ el('goal-list').addEventListener('click', (event) => {
     el('goal-cancel').hidden = false;
     goalName.focus();
   } else if (action === 'remove') {
-    if (!window.confirm(`Remove the goal "${goal.name}"? The money saved for it stays in your Goals bucket.`)) return;
-    commit(removeGoal(state, id));
+    const below = state.goals[state.goals.indexOf(goal) + 1];
+    const where = below ? `and goes to "${below.name}" next` : 'for future goals';
+    if (!window.confirm(`Remove the goal "${goal.name}"? The money saved for it stays in your Goals bucket ${where}.`)) return;
+    if (!commit(removeGoal(state, id))) return;
     if (editingGoalId === id) resetGoalForm();
     el('goal-list-result').textContent = `Removed "${goal.name}". Its money stays in your Goals bucket for your other goals.`;
     el('goals-title').focus();
@@ -433,6 +532,7 @@ function renderGoals(current) {
       weeks,
       averageWeeklyCents: projection.averageWeeklyCents,
       goalsPercent: projection.goalsPercent,
+      hasPaychecks: projection.hasPaychecks,
     });
 
     const actions = document.createElement('div');
@@ -486,8 +586,9 @@ el('whatif-apply').addEventListener('click', () => {
   if (!state || trialGoals === null || trialGoals === state.split.goals) return;
   clearMessages();
   const { split } = whatIf(state, localISODate(), trialGoals);
+  if (!commit(setSplit(state, split))) return;
   trialGoals = null;
-  commit(setSplit(state, split));
+  render();
   el('whatif-result').textContent =
     `Done. Paychecks you log from now on will be split ${split.spend}% Spend, ${split.save}% Save, ${split.goals}% Goals.`;
   slider.focus();
@@ -513,9 +614,7 @@ function renderWhatIf(current) {
   const splitText = `Spend ${split.spend}% · Save ${split.save}% · Goals ${split.goals}%`;
   el('whatif-split').textContent = splitText;
   slider.setAttribute('aria-valuetext', `Goals ${split.goals}%, Spend ${split.spend}%`);
-  el('whatif-weekly').textContent = trial.averageWeeklyCents > 0
-    ? `That's about ${formatCents(trial.weeklyCents)} a week into Goals.`
-    : 'Log a paycheck to see dates.';
+  el('whatif-weekly').textContent = whatIfWeekly(trial);
 
   el('whatif-goals').replaceChildren(...trial.goals.map((g, i) => {
     const li = document.createElement('li');
@@ -526,6 +625,7 @@ function renderWhatIf(current) {
       currentWeeks: result.current.goals[i].weeks,
       averageWeeklyCents: trial.averageWeeklyCents,
       trialGoalsPercent: split.goals,
+      hasPaychecks: trial.hasPaychecks,
     });
     return li;
   }));
@@ -544,15 +644,7 @@ const backupFile = inputEl('backup-file');
 el('backup-download').addEventListener('click', () => {
   if (!state) return;
   clearMessages();
-  const blob = new Blob([exportBackup(state)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = backupFileName(localISODate());
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  downloadText(backupFileName(localISODate()), exportBackup(state), 'application/json');
   el('backup-result').textContent = 'Backup downloaded. Keep the file somewhere safe.';
 });
 
@@ -583,7 +675,7 @@ backupFile.addEventListener('change', async () => {
     fail("The file couldn't be read.");
     return;
   }
-  const result = importBackup(text);
+  const result = importBackup(text, localISODate());
   if (!result.ok) {
     fail(result.error);
     return;
@@ -593,10 +685,11 @@ backupFile.addEventListener('change', async () => {
   }
 
   const restored = result.state;
+  if (!commit(restored)) return;
   editingSplit = false;
   trialGoals = null;
   resetGoalForm();
-  commit(restored);
+  render();
   const count = (/** @type {number} */ n, /** @type {string} */ word) => `${n} ${word}${n === 1 ? '' : 's'}`;
   el('backup-result').textContent = `Backup restored: ${count(restored.paychecks.length, 'paycheck')}, `
     + `${count(restored.purchases.length, 'purchase')} and ${count(restored.goals.length, 'goal')}.`;
@@ -607,6 +700,13 @@ backupFile.addEventListener('change', async () => {
 // Recent activity, with Remove buttons to fix mistakes
 
 const HISTORY_LIMIT = 20;
+/** True after "Show all" is pressed. */
+let showAllHistory = false;
+
+el('history-toggle').addEventListener('click', () => {
+  showAllHistory = !showAllHistory;
+  if (state) renderHistory(state);
+});
 
 el('history').addEventListener('click', (event) => {
   const button = /** @type {HTMLElement} */ (event.target).closest('button[data-id]');
@@ -616,21 +716,23 @@ el('history').addEventListener('click', (event) => {
   clearMessages();
   if (!window.confirm(`${button.getAttribute('aria-label')}? You can't undo this.`)) return;
 
+  let next;
   try {
-    commit(kind === 'paycheck' ? removePaycheck(state, id) : removePurchase(state, id));
+    next = kind === 'paycheck' ? removePaycheck(state, id) : removePurchase(state, id);
   } catch (error) {
     if (!(error instanceof OverspendError)) throw error;
     el('history-error').textContent =
       "You can't remove this paycheck because you've already spent part of it. Remove some purchases first.";
     return;
   }
+  if (!commit(next)) return;
   el('history-result').textContent = kind === 'paycheck' ? 'Paycheck removed.' : 'Purchase removed. The money is back in Spend.';
   el('history-title').focus();
 });
 
 /** @param {State} current */
 function renderHistory(current) {
-  const { items, total } = recentActivity(current, HISTORY_LIMIT);
+  const { items, total } = recentActivity(current, showAllHistory ? Infinity : HISTORY_LIMIT);
   const list = el('history');
   list.replaceChildren(...items.map((item) => {
     const isPaycheck = item.kind === 'paycheck';
@@ -665,9 +767,11 @@ function renderHistory(current) {
     return li;
   }));
   el('history-empty').hidden = total > 0;
-  const more = el('history-more');
-  more.hidden = total <= HISTORY_LIMIT;
-  more.textContent = `Showing the ${HISTORY_LIMIT} most recent of ${total}.`;
+  el('history-more').hidden = total <= HISTORY_LIMIT;
+  el('history-more-text').textContent = showAllHistory
+    ? `Showing all ${total}.`
+    : `Showing the ${HISTORY_LIMIT} most recent of ${total}.`;
+  el('history-toggle').textContent = showAllHistory ? 'Show fewer' : `Show all ${total}`;
 }
 
 // ---------------------------------------------------------------------------

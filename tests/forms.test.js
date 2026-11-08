@@ -61,3 +61,11 @@ test('readSplitInputs explains what is wrong', () => {
   assert.match(readSplitInputs({ spend: '', save: '30', goals: '20' }).error, /whole numbers/i);
   assert.match(readSplitInputs({ spend: '150', save: '-30', goals: '-20' }).error, /whole numbers/i);
 });
+
+// Fresh-eyes review U3: a wrong year (1999 instead of 2026) hides an entry at the bottom of the list.
+
+test('readPastDate asks you to check the year for dates more than 2 years ago', () => {
+  assert.deepEqual(readPastDate('2024-11-07', '2026-11-07'), { ok: true, date: '2024-11-07' }); // exactly 730 days
+  assert.match(readPastDate('2024-11-06', '2026-11-07').error, /more than 2 years ago\. Check the year/i);
+  assert.match(readPastDate('1999-01-01', '2026-11-07').error, /check the year/i);
+});

@@ -118,6 +118,17 @@ export function weeksToGoal({ targetCents, savedCents, weeklyCents }) {
  * @returns {number}
  */
 export function averageWeeklyIncome(paychecks, todayISO, windowDays = 28) {
+  return Math.round((incomeInWindow(paychecks, todayISO, windowDays) * 7) / windowDays);
+}
+
+/**
+ * Total cents of paychecks dated after (today - windowDays) and up to and including today.
+ * @param {{date: string, cents: number}[]} paychecks
+ * @param {string} todayISO
+ * @param {number} [windowDays=28]
+ * @returns {number}
+ */
+export function incomeInWindow(paychecks, todayISO, windowDays = 28) {
   if (!Number.isInteger(windowDays) || windowDays < 1) {
     throw new RangeError(`windowDays must be a whole number of days, at least 1, got ${windowDays}`);
   }
@@ -132,5 +143,5 @@ export function averageWeeklyIncome(paychecks, todayISO, windowDays = 28) {
     const day = dayNumber(paycheck.date);
     if (day > earliest && day <= today) total += paycheck.cents;
   }
-  return Math.round((total * 7) / windowDays);
+  return total;
 }
