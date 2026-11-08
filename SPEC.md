@@ -82,6 +82,11 @@ A bottom sheet with the amount only (date is today) on the numeric keypad, and a
 After saving, the sheet shows where the money went ("Your $42.50 became $21.25 to spend,
 $12.75 saved, $8.50 for goals.") and the updated timeline for each goal, with "Done" and
 "Undo". After "Done", "Undo paycheck" stays on Home with "Paycheck added." for a while.
+After the very first paycheck only, it also asks "How often do you get paid?" with five
+chips: "Every week", "Every 2 weeks", "Twice a month", "Once a month", "It's different
+every time". A tap saves at once ("Saved. You can change it in Settings.") and redraws the
+goal timelines. "Done" without an answer leaves "It's different every time". People who
+already had paychecks before this version are not asked.
 
 ### Buy it
 Only for a fully saved goal (its whole price is covered). A sheet asks what it really
@@ -96,6 +101,8 @@ returns the goal to the top, priced at what came out of Goals.
 - Your split: Spend / Save / Goals, must total 100. While editing, the goals' new
   dates show live. Nothing changes until "Save split"; closing Settings with a new, valid
   split asks "Save your new split (...)?" first.
+- How often do you get paid? The same five answers as radio rows. A change saves at once
+  and says the new number ("Saved. Spend about $100 a week."). It always applies.
 - Your money: what is in Spend, Save and Goals. With tracking off, Spend is everything
   that went into it (purchases aren't taken out).
 - Track my spending (switch).
@@ -112,15 +119,19 @@ purchases (from before this version, or from a backup) starts with it on.
 
 ## The numbers
 
-### Weekly pay (learned from paycheck gaps)
+### Weekly pay (from how often the teen gets paid)
 - Paydays: paychecks grouped into paydays. A paycheck less than 4 days after the first
   paycheck of a payday joins it, so a duplicate, or a second job paying a few days apart,
   never fakes a 1-day gap. Dates after today are ignored.
 - Recent paydays: the last 6.
-- Usual gap: the median number of days between recent paydays, rounded to a whole day.
-  With only one payday, 14 days (paid every 2 weeks).
+- Usual gap: set by the answer to "How often do you get paid?", however many paydays
+  there are: every week 7 days, every 2 weeks 14, twice a month 365 ÷ 24 (24 paydays a
+  year), once a month 365 ÷ 12. Only "It's different every time" learns it: the median
+  number of days between recent paydays, rounded to a whole day; with only one payday,
+  14 days. Kept as an exact fraction; a date counted from it is rounded up to a whole day.
 - Weekly pay = (total of the recent paydays ÷ their number) × 7 ÷ usual gap.
-  Worked out exactly in whole numbers; rounded only for display.
+  Worked out exactly in whole numbers; rounded only for display. Because a stated gap
+  doesn't stretch, a weekly earner who forgets one paycheck keeps the right number.
 - It does not fall just because time passes without logging; the "Got paid?" line nudges.
   A skipped payday does stretch the gap, so the paycheck sheet offers to add it (below).
 
@@ -148,29 +159,30 @@ into Goals. Change it in Settings."
 
 ### "Got paid? Log it."
 Shown when the app opens, or comes back on screen, if there is at least one paycheck and
-the last payday is more than the usual gap plus 2 days ago (with one payday: more than 16
-days ago). Logging a paycheck makes it go away.
+the last payday is more than the usual gap plus 2 days ago (every 2 weeks, or one payday and
+"It's different every time": more than 16 days ago). Logging a paycheck makes it go away.
 
 ## Data
-Stored on the device (localStorage) as version 2:
+Stored on the device (localStorage) as version 3:
 ```
-{ version: 2,
+{ version: 3,
   split: { spend, save, goals },
-  settings: { trackSpending },
+  settings: { trackSpending, payFrequency },   // 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly' | 'varies'
   paychecks: [{ id, date, cents, spend, save, goals }],
   purchases: [{ id, date, cents, note }],
   goals: [{ id, name, targetCents }],
   goalPurchases: [{ id, date, cents, name }] }
 ```
-Version 1 data and backups still load and are upgraded (`trackSpending` is on if there
-are purchases; `goalPurchases` is empty). Backups are written as version 2.
+Version 1 and 2 data and backups still load and are upgraded (`trackSpending` is on if a
+version 1 file has purchases; `goalPurchases` starts empty; `payFrequency` is `'varies'`, so
+the numbers don't change). Backups are written as version 3 (docs/adr/0007).
 
 ## Rules that must always hold
 - Money is integer cents everywhere. Never floats.
 - A split never loses or invents a cent (largest-remainder rounding).
 - Each paycheck keeps the split it was logged with.
 - Balances are calculated from the records, never stored. No bucket goes below zero.
-- Nobody loses data in an upgrade: every version 1 record is kept.
+- Nobody loses data in an upgrade: every version 1 and 2 record is kept.
 - No network requests. The service worker only fetches the app's own files.
 - An imported backup is untrusted: every field is checked; text is never inserted as HTML.
 - Two open tabs never overwrite each other's changes.
@@ -205,8 +217,10 @@ Answered by the owner on 2026-11-07.
 7. **Buy it, when:** only when a goal is fully saved.
 8. **Buy it, price:** the teen types the real price, prefilled with the goal's price.
    Less: the rest stays in Goals. More: only the goal's price comes out of Goals.
-9. **Weekly pay rule:** learned from paycheck gaps, assuming every 2 weeks until there
-   are two paydays.
+9. **Weekly pay rule:** the answer to "How often do you get paid?" sets the usual gap,
+   and keeps setting it however many paydays there are (owner, 2026-11-08, docs/adr/0007).
+   Only "It's different every time" learns the gap from paycheck dates, assuming every
+   2 weeks until there are two paydays (the rule before).
 10. **Old tests:** browser tests and wording tests for screens that no longer exist are
     replaced by new phone tests first, then removed. Logic tests stay.
     `tests/budget.test.js` is never changed.

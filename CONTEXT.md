@@ -7,7 +7,8 @@ add it here.
 |---|---|---|
 | **Paycheck** | Take-home pay the teen logs: an amount in cents and a date (today when logged in the app). Keeps the split it was logged with. | `state.paychecks`, `addPaycheck` |
 | **Payday** | One or more paychecks less than 4 days apart, dated by the first. A duplicate or a second job a few days apart is one payday. | `paydays()` in `src/pay.js` |
-| **Usual gap** | The median number of days between the last 6 paydays; 14 when there is only one payday. | `usualGapDays()` |
+| **Pay frequency** | The answer to "How often do you get paid?": Every week, Every 2 weeks, Twice a month, Once a month or It's different every time. Asked once after the first paycheck; changeable in Settings. | `state.settings.payFrequency`, `setPayFrequency()` |
+| **Usual gap** | Days between paydays. Set by the pay frequency (7, 14, 365 ÷ 24, 365 ÷ 12). For "It's different every time" only: the median number of days between the last 6 paydays, or 14 with one payday. Kept as a fraction `{ num, den }`. | `payGap()`, `usualGapDays()` |
 | **Weekly pay** | Average payday amount × 7 ÷ usual gap. Kept as an exact fraction `{ cents, days }` (cents earned per that many days) so nothing is rounded early. | `weeklyPay()` |
 | **Split** | Three whole percents for Spend, Save and Goals that total 100. Starts at 50/30/20. | `state.split` |
 | **Bucket** | Spend, Save or Goals. Its balance is always calculated from the records. | `balances()` |
@@ -23,6 +24,6 @@ add it here.
 | **Got paid? Log it.** | The nudge shown when the last payday is more than the usual gap plus 2 days ago. | `gotPaidDue()` |
 | **Sheet** | A panel that slides up from the bottom (paycheck, buy it, purchase, goal). Built on `<dialog>`. | `.sheet` |
 | **History** | Every paycheck, purchase and goal purchase, newest first, in Settings. The place to fix mistakes. | `recentActivity()` |
-| **Version 1 / version 2** | The saved-data format. Version 1 is upgraded to version 2 on load and restore. | `upgradeState()` |
+| **Version 1 / 2 / 3** | The saved-data format. The app upgrades versions 1 and 2 to version 3 on load and restore. | `upgradeToV3()` |
 | **Missed payday** | An expected payday (last payday + usual gap, repeated) at least half a gap in the past with nothing logged. The paycheck sheet offers to add it. | `missedPaydays()` |
 | **Backup nudge** | The "Back up your info" card after every 4 paychecks since the last backup or "Not now" on this phone. | `backupDue()` |

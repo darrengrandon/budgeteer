@@ -1,6 +1,7 @@
 # 4. Weekly pay is learned from the gaps between paydays
 
-Date: 2026-11-07. Status: accepted (owner, decision 9). Replaces decision 5.
+Date: 2026-11-07. Status: accepted (owner, decision 9). Replaces decision 5. The gap rule
+now applies only to "It's different every time": see docs/adr/0007.
 
 ## Context
 "Spend about $X a week" is now the headline. The 28-day average shows a quarter of the
