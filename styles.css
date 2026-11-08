@@ -1,0 +1,313 @@
+/* Budgeteer styles. Phone first (about 400px wide), light and dark theme from the device setting. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6fa;
+  --card: #ffffff;
+  --text: #1d2030;
+  --muted: #555b70;
+  --border: #d5d8e3;
+  --input-bg: #ffffff;
+  --accent: #3d4bd6;
+  --accent-text: #ffffff;
+  --focus: #1f6feb;
+  --error: #b3261e;
+  --error-bg: #fdecea;
+  --ok: #1b6e3a;
+  --ok-bg: #e6f4ea;
+  --notice-bg: #fff4d6;
+  --notice-text: #5c4100;
+  --spend: #0f7b6c;
+  --save: #2459c7;
+  --goals: #8a3ffc;
+  --track: #e3e5ee;
+  --radius: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12131a;
+    --card: #1d1f2a;
+    --text: #eceef6;
+    --muted: #a9aec2;
+    --border: #3a3e52;
+    --input-bg: #262938;
+    --accent: #8b95ff;
+    --accent-text: #10122a;
+    --focus: #9cc2ff;
+    --error: #ffb4ab;
+    --error-bg: #3b1a17;
+    --ok: #8fd9a8;
+    --ok-bg: #16301f;
+    --notice-bg: #3a2f10;
+    --notice-text: #ffe08a;
+    --spend: #4fd1bd;
+    --save: #8ab4ff;
+    --goals: #c8a6ff;
+    --track: #33374a;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.site-header,
+main {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.site-header {
+  padding-top: 1.25rem;
+  padding-bottom: 0.5rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.2rem;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+.tagline {
+  margin: 0;
+  color: var(--muted);
+}
+
+main {
+  padding-bottom: 3rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+/* Forms */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.9rem;
+  min-width: 0;
+}
+
+label {
+  font-weight: 600;
+}
+
+small {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+input,
+button,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--error);
+  border-width: 2px;
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.money-input > span {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.split-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.split-inputs .field {
+  margin-bottom: 0.25rem;
+}
+
+.unit {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+button {
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+button.small {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+button.danger {
+  color: var(--error);
+}
+
+/* Clear keyboard focus everywhere. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.hint {
+  color: var(--muted);
+  margin: 0.5rem 0;
+}
+
+.error:empty,
+.result:empty {
+  display: none;
+}
+
+.error {
+  color: var(--error);
+  background: var(--error-bg);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+}
+
+.result {
+  color: var(--ok);
+  background: var(--ok-bg);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  margin: 0.75rem 0 0;
+  font-weight: 600;
+}
+
+.notice {
+  background: var(--notice-bg);
+  color: var(--notice-text);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0 0;
+  font-weight: 600;
+}
+
+/* Buckets */
+
+.buckets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.bucket {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-top: 5px solid var(--bucket-color);
+  min-width: 0;
+}
+
+.bucket-spend { --bucket-color: var(--spend); }
+.bucket-save { --bucket-color: var(--save); }
+.bucket-goals { --bucket-color: var(--goals); }
+
+.bucket-name {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.bucket-amount {
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bucket-pct {
+  color: var(--muted);
+  font-size: 0.8rem;
+}

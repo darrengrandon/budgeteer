@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <!-- No network: scripts and styles come only from this folder, and fetch/XHR are blocked. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>Budgeteer</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Budgeteer</h1>
+    <p class="tagline">Split your paycheck. Reach your goals.</p>
+  </header>
+
+  <main>
+    <p id="notice" class="notice" role="status" hidden></p>
+    <noscript><p class="notice">Budgeteer needs JavaScript turned on to work.</p></noscript>
+
+    <!-- Choosing the split: shown on first run, and when changing it later. -->
+    <section id="setup" class="card" aria-labelledby="setup-title" hidden>
+      <h2 id="setup-title">How should each paycheck be split?</h2>
+      <p id="setup-intro">Pick how much of every paycheck goes into each bucket. You can change this later.</p>
+      <form id="split-form" novalidate>
+        <div class="split-inputs">
+          <div class="field">
+            <label for="split-spend">Spend <span class="unit">%</span></label>
+            <input id="split-spend" name="spend" type="number" inputmode="numeric" min="0" max="100" step="1" required
+                   aria-describedby="split-spend-help split-hint">
+            <small id="split-spend-help">Fun money for whatever you want</small>
+          </div>
+          <div class="field">
+            <label for="split-save">Save <span class="unit">%</span></label>
+            <input id="split-save" name="save" type="number" inputmode="numeric" min="0" max="100" step="1" required
+                   aria-describedby="split-save-help split-hint">
+            <small id="split-save-help">Money you keep for later</small>
+          </div>
+          <div class="field">
+            <label for="split-goals">Goals <span class="unit">%</span></label>
+            <input id="split-goals" name="goals" type="number" inputmode="numeric" min="0" max="100" step="1" required
+                   aria-describedby="split-goals-help split-hint">
+            <small id="split-goals-help">For the things you're saving up for</small>
+          </div>
+        </div>
+        <p id="split-hint" class="hint" aria-live="polite"></p>
+        <p id="split-error" class="error" role="alert"></p>
+        <div class="actions">
+          <button type="submit" id="split-submit" class="primary">Start budgeting</button>
+          <button type="button" id="split-preset">Use 50 / 30 / 20</button>
+          <button type="button" id="split-cancel" hidden>Cancel</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- The main app, once a split is chosen. -->
+    <div id="main" hidden>
+      <section class="card" aria-labelledby="balances-title">
+        <h2 id="balances-title">Your money</h2>
+        <ul class="buckets">
+          <li class="bucket bucket-spend">
+            <span class="bucket-name">Spend</span>
+            <span class="bucket-amount" id="balance-spend">$0.00</span>
+            <span class="bucket-pct" id="pct-spend"></span>
+          </li>
+          <li class="bucket bucket-save">
+            <span class="bucket-name">Save</span>
+            <span class="bucket-amount" id="balance-save">$0.00</span>
+            <span class="bucket-pct" id="pct-save"></span>
+          </li>
+          <li class="bucket bucket-goals">
+            <span class="bucket-name">Goals</span>
+            <span class="bucket-amount" id="balance-goals">$0.00</span>
+            <span class="bucket-pct" id="pct-goals"></span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="paycheck-title">
+        <h2 id="paycheck-title">Log a paycheck</h2>
+        <form id="paycheck-form" novalidate>
+          <div class="field">
+            <label for="paycheck-amount">Take-home amount</label>
+            <div class="money-input">
+              <span aria-hidden="true">$</span>
+              <input id="paycheck-amount" name="amount" type="text" inputmode="decimal" autocomplete="off"
+                     aria-describedby="paycheck-amount-help paycheck-error">
+            </div>
+            <small id="paycheck-amount-help">What actually landed in your pocket or account after taxes.</small>
+          </div>
+          <div class="field">
+            <label for="paycheck-date">Date paid</label>
+            <input id="paycheck-date" name="date" type="date" required aria-describedby="paycheck-error">
+          </div>
+          <p id="paycheck-error" class="error" role="alert"></p>
+          <div class="actions">
+            <button type="submit" class="primary">Add paycheck</button>
+          </div>
+        </form>
+        <p id="paycheck-result" class="result" role="status"></p>
+      </section>
+
+      <section class="card" aria-labelledby="settings-title">
+        <h2 id="settings-title">Settings</h2>
+        <p>Each paycheck is split <span id="current-split"></span>.</p>
+        <div class="actions">
+          <button type="button" id="change-split">Change my split</button>
+        </div>
+        <p id="settings-result" class="result" role="status"></p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

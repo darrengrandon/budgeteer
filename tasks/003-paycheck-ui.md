@@ -2,7 +2,7 @@
 id: 003
 title: Split setup, log a paycheck, show balances
 depends_on: [002]
-status: todo
+status: done
 ---
 
 ## Goal

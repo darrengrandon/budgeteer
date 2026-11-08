@@ -1,0 +1,33 @@
+// @ts-check
+// Browser tests for Budgeteer. ./check.sh runs these once @playwright/test is installed.
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from '@playwright/test';
+
+// Keep Playwright's browsers inside this project instead of ~/.cache. This runs before any
+// test worker starts, so the workers inherit it. Install them with: npm run setup:browsers
+process.env.PLAYWRIGHT_BROWSERS_PATH ||= fileURLToPath(new URL('./.playwright-browsers', import.meta.url));
+
+const PORT = 8137;
+const BASE_URL = `http://127.0.0.1:${PORT}`;
+
+export default defineConfig({
+  testDir: './e2e',
+  forbidOnly: Boolean(process.env.CI),
+  retries: 0,
+  reporter: 'list',
+  use: {
+    baseURL: BASE_URL,
+    browserName: 'chromium',
+    viewport: { width: 400, height: 860 }, // phone width, from SPEC.md
+    timezoneId: 'America/Chicago',
+    locale: 'en-US',
+    trace: 'retain-on-failure',
+  },
+  webServer: {
+    // Serves the files only. Bound to this computer so the folder is not shared on the network.
+    command: `python3 -m http.server ${PORT} --bind 127.0.0.1`,
+    url: `${BASE_URL}/index.html`,
+    reuseExistingServer: false,
+    timeout: 20_000,
+  },
+});

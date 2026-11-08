@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "./check.sh"
+    "check": "./check.sh",
+    "setup:browsers": "PLAYWRIGHT_BROWSERS_PATH=$PWD/.playwright-browsers playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
   }
 }

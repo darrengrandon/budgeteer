@@ -22,6 +22,18 @@ export function dayNumber(iso) {
 }
 
 /**
+ * The device's local calendar day as 'YYYY-MM-DD' (what "today" means to the person).
+ * @param {Date} [date]
+ * @returns {string}
+ */
+export function localISODate(date = new Date()) {
+  const year = String(date.getFullYear()).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * True if the value is a 'YYYY-MM-DD' string for a real calendar date.
  * @param {unknown} iso
  * @returns {boolean}

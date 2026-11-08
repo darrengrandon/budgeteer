@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayNumber, isISODate, weeksToGoal, averageWeeklyIncome } from '../src/budget.js';
+import { dayNumber, isISODate, localISODate, weeksToGoal, averageWeeklyIncome } from '../src/budget.js';
+
+test('localISODate writes the local calendar day as YYYY-MM-DD', () => {
+  assert.equal(localISODate(new Date(2026, 10, 7, 23, 59)), '2026-11-07'); // late evening stays the same day
+  assert.equal(localISODate(new Date(2026, 0, 5, 0, 1)), '2026-01-05');
+  assert.equal(localISODate(new Date(987, 11, 31)), '0987-12-31');
+});
 
 test('dayNumber counts whole UTC days from 1970-01-01', () => {
   assert.equal(dayNumber('1970-01-01'), 0);
