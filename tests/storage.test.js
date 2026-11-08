@@ -727,3 +727,14 @@ test('new records in a version 2 state keep it version 2 and loadable', () => {
   assert.equal(importBackup(exportBackup(state)).ok, true);
   assert.equal(nextId('x', [{ id: 'x1' }, { id: 'x7' }]), 'x8');
 });
+
+// Ticket 017: History lists goal buys too.
+
+test('recentActivity includes goal buys, with their goal name', () => {
+  let state = addPaycheck(newState(), { date: '2026-11-01', cents: 20000 });
+  state = { ...state, goalPurchases: [{ id: 'x1', date: '2026-11-07', cents: 3000, name: 'Tickets' }] };
+  const { items, total } = recentActivity(state, 20);
+  assert.equal(total, 2);
+  assert.deepEqual(items[0], { kind: 'goalPurchase', id: 'x1', date: '2026-11-07', cents: 3000, name: 'Tickets' });
+  assert.equal(items[1].kind, 'paycheck');
+});

@@ -16,14 +16,25 @@ import {
   removeGoal,
   moveGoal,
   removePaycheck,
+  removePurchase,
+  removeGoalPurchase,
+  OverspendError,
+  GoalMoneyUsedError,
   paycheckParts,
+  setSplit,
+  balances,
+  recentActivity,
+  exportBackup,
+  importBackup,
+  backupFileName,
+  LIMITS,
 } from './storage.js';
 import { buyGoal } from './goals.js';
 import { centsToInput, formatCents } from './money.js';
 import { localISODate } from './budget.js';
 import { homePlan } from './plan.js';
-import { paycheckSentence, goalTimeline, buySentence } from './words.js';
-import { readAmount } from './forms.js';
+import { paycheckSentence, goalTimeline, buySentence, splitTotalHint, shortDate } from './words.js';
+import { readAmount, readSplitInputs, toPercent } from './forms.js';
 
 /** @typedef {import('./storage.js').State} State */
 
@@ -63,11 +74,40 @@ function clearErrors(root) {
   for (const node of root.querySelectorAll('[aria-invalid]')) node.removeAttribute('aria-invalid');
 }
 
-/** @param {string | null} text */
-function showNotice(text) {
-  el('notice').textContent = text ?? '';
+/**
+ * The message at the top of the page.
+ * @param {string | null} text
+ * @param {boolean} [offerDownload] show "Download the unreadable data"
+ */
+function showNotice(text, offerDownload = false) {
+  el('notice-text').textContent = text ?? '';
+  el('notice-download').hidden = !offerDownload;
   el('notice').hidden = !text;
 }
+
+/**
+ * Hand the teen a file to save.
+ * @param {string} fileName
+ * @param {string} text
+ * @param {string} type
+ */
+function downloadText(fileName, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/**
+ * "1 paycheck", "2 goal buys"
+ * @param {number} n
+ * @param {string} word
+ */
+const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**
  * Open a sheet. Clicking the dimmed area above it closes it.
@@ -103,7 +143,13 @@ let lastSaved = readSaved(storage);
 const loaded = loadState(storage);
 /** @type {State | null} */
 let state = loaded.state ? upgradeState(loaded.state) : null;
-showNotice(loaded.warning === DAMAGED_WARNING || loaded.warning === NO_STORAGE_WARNING ? loaded.warning : null);
+/** Saved text that couldn't be read, kept so the teen can download it and get help. */
+const unreadable = loaded.warning === DAMAGED_WARNING && typeof lastSaved === 'string' ? lastSaved : null;
+showNotice(loaded.warning, unreadable !== null);
+
+el('notice-download').addEventListener('click', () => {
+  if (unreadable !== null) downloadText(`budgeteer-unreadable-${localISODate()}.txt`, unreadable, 'text/plain');
+});
 
 /**
  * Save the new state and redraw. Returns false, and changes nothing, if another tab saved
@@ -444,6 +490,255 @@ el('goal-cards').addEventListener('click', (event) => {
 });
 
 // ---------------------------------------------------------------------------
+// Settings: split (with a live preview), your money, history, backup, install help
+
+const settingsSheet = dialogEl('settings-sheet');
+const splitInputs = { spend: inputEl('split-spend'), save: inputEl('split-save'), goals: inputEl('split-goals') };
+const HISTORY_LIMIT = 20;
+let showAllHistory = false;
+
+const splitValues = () => ({ spend: splitInputs.spend.value, save: splitInputs.save.value, goals: splitInputs.goals.value });
+
+/** Clear every message inside Settings, so only the newest one shows. */
+function clearSettingsMessages() {
+  for (const node of settingsSheet.querySelectorAll('.result')) node.textContent = '';
+  clearErrors(settingsSheet);
+  el('split-hint').hidden = false;
+}
+
+function openSettings() {
+  if (!state) return;
+  clearSettingsMessages();
+  splitInputs.spend.value = String(state.split.spend);
+  splitInputs.save.value = String(state.split.save);
+  splitInputs.goals.value = String(state.split.goals);
+  showAllHistory = false;
+  renderSettings();
+  openSheet(settingsSheet);
+  el('settings-done').focus();
+}
+
+el('open-settings').addEventListener('click', openSettings);
+el('settings-done').addEventListener('click', () => settingsSheet.close());
+
+/** The split hint and, when the split is valid, what it would mean. */
+function renderSplitPreview() {
+  if (!state) return;
+  const values = splitValues();
+  el('split-hint').textContent = splitTotalHint({
+    spend: toPercent(values.spend), save: toPercent(values.save), goals: toPercent(values.goals),
+  });
+  const result = readSplitInputs(values);
+  el('split-preview-box').hidden = !result.ok;
+  if (!result.ok) return;
+  const today = localISODate();
+  const plan = homePlan(state, today, result.split);
+  const lines = [plan.headline, ...plan.goals.map((g) => goalTimeline({
+    name: g.name, savedCents: g.savedCents, targetCents: g.targetCents, weeks: g.weeks,
+    hasPay: plan.basis !== '', goalsPercent: result.split.goals, todayISO: today,
+  }))];
+  el('split-preview').replaceChildren(...lines.map((line) => {
+    const li = document.createElement('li');
+    li.textContent = line;
+    return li;
+  }));
+}
+
+for (const input of Object.values(splitInputs)) {
+  input.addEventListener('input', () => {
+    clearErrors(el('split-form'));
+    el('split-hint').hidden = false;
+    renderSplitPreview();
+  });
+}
+
+el('split-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!state) return;
+  clearSettingsMessages();
+  const result = readSplitInputs(splitValues());
+  if (!result.ok) {
+    el('split-hint').hidden = true; // the alert says the same thing; show it once
+    showError('split-error', result.error, splitInputs.spend);
+    return;
+  }
+  if (!commit(setSplit(state, result.split))) return;
+  const { spend, save, goals } = result.split;
+  el('split-result').textContent =
+    `Saved. Paychecks you log from now on will be split ${spend}% Spend, ${save}% Save, ${goals}% Goals.`;
+});
+
+function renderMoney() {
+  if (!state) return;
+  const totals = balances(state);
+  el('money').replaceChildren(...[['Spend', totals.spend], ['Save', totals.save], ['Goals', totals.goals]].map(([name, cents]) => {
+    const li = document.createElement('li');
+    const label = document.createElement('span');
+    label.textContent = String(name);
+    const amount = document.createElement('span');
+    amount.textContent = formatCents(Number(cents));
+    li.append(label, amount);
+    return li;
+  }));
+}
+
+/**
+ * What a History row says, and its Remove button's name.
+ * @param {import('./storage.js').ActivityItem} item
+ */
+function historyWords(item) {
+  const when = shortDate(item.date);
+  const money = formatCents(item.cents);
+  if (item.kind === 'paycheck') {
+    return { what: 'Paycheck', amount: `+${money}`, label: `Remove paycheck of ${money} from ${when}`, button: 'Remove' };
+  }
+  if (item.kind === 'purchase') {
+    const what = item.note || 'Purchase';
+    return { what, amount: `−${money}`, label: `Remove purchase "${what}" of ${money} from ${when}`, button: 'Remove' };
+  }
+  return { what: `Bought: ${item.name}`, amount: `−${money}`, label: `Undo buying ${item.name} (${money}) from ${when}`, button: 'Undo' };
+}
+
+function renderHistory() {
+  if (!state) return;
+  const { items, total } = recentActivity(state, showAllHistory ? Infinity : HISTORY_LIMIT);
+  el('history').replaceChildren(...items.map((item) => {
+    const words = historyWords(item);
+    const li = document.createElement('li');
+    const text = document.createElement('span');
+    text.className = 'history-text';
+    const what = document.createElement('span');
+    what.className = 'history-what';
+    what.textContent = words.what;
+    const when = document.createElement('span');
+    when.className = 'history-when';
+    when.textContent = shortDate(item.date);
+    text.append(what, when);
+    const amount = document.createElement('span');
+    amount.className = item.kind === 'paycheck' ? 'history-amount in' : 'history-amount';
+    amount.textContent = words.amount;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'secondary';
+    button.textContent = words.button;
+    button.dataset.id = item.id;
+    button.dataset.kind = item.kind;
+    button.setAttribute('aria-label', words.label);
+    li.append(text, amount, button);
+    return li;
+  }));
+  el('history-empty').hidden = total > 0;
+  const toggle = el('history-toggle');
+  toggle.hidden = total <= HISTORY_LIMIT;
+  toggle.textContent = showAllHistory ? 'Show fewer' : `Show all ${total}`;
+}
+
+el('history-toggle').addEventListener('click', () => {
+  showAllHistory = !showAllHistory;
+  renderHistory();
+});
+
+el('history').addEventListener('click', (event) => {
+  const button = /** @type {HTMLElement} */ (event.target).closest('button[data-id]');
+  if (!(button instanceof HTMLButtonElement) || !state) return;
+  const { id, kind } = button.dataset;
+  if (!id) return;
+  clearSettingsMessages();
+
+  // Check first, so the teen is never asked to confirm something that then gets refused.
+  let next;
+  try {
+    if (kind === 'paycheck') next = removePaycheck(state, id);
+    else if (kind === 'purchase') next = removePurchase(state, id);
+    else next = removeGoalPurchase(state, id);
+  } catch (error) {
+    if (error instanceof OverspendError) {
+      el('history-error').textContent =
+        "You can't remove this paycheck because you've already spent part of it. Remove some purchases first.";
+      return;
+    }
+    if (error instanceof GoalMoneyUsedError) {
+      el('history-error').textContent =
+        "You can't remove this paycheck, because its goal money already paid for something you bought. Undo that buy first.";
+      return;
+    }
+    throw error;
+  }
+  const label = button.getAttribute('aria-label');
+  const question = kind === 'goalPurchase' ? `${label}? The money goes back into Goals.` : `${label}? You can't undo this.`;
+  if (!window.confirm(question)) return;
+  const record = (state.goalPurchases ?? []).find((x) => x.id === id);
+  if (!commit(next)) return;
+  if (kind === 'paycheck') el('history-result').textContent = 'Paycheck removed.';
+  else if (kind === 'purchase') el('history-result').textContent = 'Purchase removed. The money is back in Spend.';
+  else el('history-result').textContent =
+    `Undone. ${formatCents(record?.cents ?? 0)} is back in Goals. Add the goal again if you still want it.`;
+  el('history-title').focus();
+});
+
+function renderSettings() {
+  renderSplitPreview();
+  renderMoney();
+  renderHistory();
+}
+
+// Backup: download the records as a file, or restore them from one. A restored file is
+// untrusted: importBackup checks every field (and dates against today) before anything changes.
+
+const backupFile = inputEl('backup-file');
+
+el('backup-download').addEventListener('click', () => {
+  if (!state) return;
+  clearSettingsMessages();
+  downloadText(backupFileName(localISODate()), exportBackup(state), 'application/json');
+  el('backup-result').textContent = 'Backup downloaded. Keep the file somewhere safe.';
+});
+
+function chooseBackupFile() {
+  clearSettingsMessages();
+  el('welcome-restore-error').textContent = '';
+  backupFile.value = '';
+  backupFile.click();
+}
+el('backup-restore').addEventListener('click', chooseBackupFile);
+el('welcome-restore').addEventListener('click', chooseBackupFile);
+
+backupFile.addEventListener('change', async () => {
+  const file = backupFile.files?.[0];
+  if (!file) return;
+  const firstRun = state === null;
+  const fail = (/** @type {string} */ reason) => {
+    el(firstRun ? 'welcome-restore-error' : 'backup-error').textContent =
+      `That file couldn't be restored, so nothing was changed. ${reason}`;
+  };
+  if (file.size > LIMITS.maxBackupChars) {
+    fail('It is too big to be a Budgeteer backup.');
+    return;
+  }
+  let text;
+  try {
+    text = await file.text();
+  } catch {
+    fail("The file couldn't be read.");
+    return;
+  }
+  const result = importBackup(text, localISODate());
+  if (!result.ok) {
+    fail(result.error);
+    return;
+  }
+  if (!firstRun && !window.confirm('Restoring replaces everything in Budgeteer right now with what is in the backup. Go ahead?')) {
+    return;
+  }
+  const restored = upgradeState(result.state);
+  if (!commit(restored)) return;
+  const message = `Backup restored: ${count(restored.paychecks.length, 'paycheck')}, `
+    + `${count(restored.purchases.length, 'purchase')}, ${count(restored.goals.length, 'goal')} `
+    + `and ${count(restored.goalPurchases?.length ?? 0, 'goal buy')}.`;
+  el(firstRun ? 'home-status' : 'backup-result').textContent = message;
+});
+
+// ---------------------------------------------------------------------------
 // Drawing
 
 /**
@@ -502,7 +797,9 @@ function render() {
   el('welcome').hidden = !firstRun;
   el('home').hidden = firstRun;
   el('paybar').hidden = firstRun;
+  el('open-settings').hidden = firstRun;
   if (!state) return;
+  if (settingsSheet.open) renderSettings();
 
   const plan = homePlan(state, localISODate());
   el('nudge').hidden = !plan.nudge;

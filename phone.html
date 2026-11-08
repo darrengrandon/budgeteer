@@ -16,9 +16,13 @@
   <div class="app">
     <header class="app-bar">
       <h1>Budgeteer</h1>
+      <button type="button" id="open-settings" class="icon-button" aria-label="Settings" hidden>⚙</button>
     </header>
 
-    <p id="notice" class="notice" role="status" hidden></p>
+    <div id="notice" class="notice" role="status" hidden>
+      <p id="notice-text"></p>
+      <button type="button" id="notice-download" class="secondary wide" hidden>Download the unreadable data</button>
+    </div>
     <noscript><p class="notice">Budgeteer needs JavaScript turned on to work.</p></noscript>
 
     <!-- First run: no setup, just what they're saving for (or skip). -->
@@ -46,6 +50,10 @@
       <div class="row-center">
         <button type="button" id="welcome-skip" class="link">Skip for now</button>
       </div>
+      <div class="row-center">
+        <button type="button" id="welcome-restore" class="link">Restore a backup</button>
+      </div>
+      <p id="welcome-restore-error" class="error" role="alert"></p>
     </section>
 
     <!-- Home: one screen. -->
@@ -103,6 +111,82 @@
       </div>
     </div>
   </dialog>
+  <!-- One file picker for both "Restore" buttons. -->
+  <input type="file" id="backup-file" accept=".json,application/json" aria-label="Backup file to restore" hidden>
+
+  <!-- Settings: a tall sheet. -->
+  <dialog id="settings-sheet" class="sheet full" aria-labelledby="settings-title">
+    <div class="sheet-head">
+      <h2 id="settings-title">Settings</h2>
+      <button type="button" id="settings-done" class="link">Done</button>
+    </div>
+
+    <section class="settings-section" aria-labelledby="split-title">
+      <h3 id="split-title">Your split</h3>
+      <p class="muted">How each new paycheck is shared out. Paychecks you already logged keep theirs.</p>
+      <form id="split-form" novalidate>
+        <div class="split-inputs">
+          <div class="field">
+            <label for="split-spend">Spend %</label>
+            <input id="split-spend" type="text" inputmode="numeric" autocomplete="off" maxlength="3"
+                   aria-describedby="split-hint">
+          </div>
+          <div class="field">
+            <label for="split-save">Save %</label>
+            <input id="split-save" type="text" inputmode="numeric" autocomplete="off" maxlength="3"
+                   aria-describedby="split-hint">
+          </div>
+          <div class="field">
+            <label for="split-goals">Goals %</label>
+            <input id="split-goals" type="text" inputmode="numeric" autocomplete="off" maxlength="3"
+                   aria-describedby="split-hint">
+          </div>
+        </div>
+        <p id="split-hint" class="muted" aria-live="polite"></p>
+        <p id="split-error" class="error" role="alert"></p>
+        <div id="split-preview-box" class="preview">
+          <p class="muted">With this split:</p>
+          <ul id="split-preview"></ul>
+        </div>
+        <button type="submit" class="primary wide">Save split</button>
+        <p id="split-result" class="result" role="status"></p>
+      </form>
+    </section>
+
+    <section class="settings-section" aria-labelledby="money-title">
+      <h3 id="money-title">Your money</h3>
+      <ul id="money" class="money-list"></ul>
+    </section>
+
+    <section class="settings-section" aria-labelledby="history-title">
+      <h3 id="history-title" tabindex="-1">History</h3>
+      <p id="history-empty" class="muted">Nothing yet. Paychecks you log show up here.</p>
+      <ul id="history" class="history"></ul>
+      <button type="button" id="history-toggle" class="secondary wide" hidden></button>
+      <p id="history-error" class="error" role="alert"></p>
+      <p id="history-result" class="result" role="status"></p>
+    </section>
+
+    <section class="settings-section" aria-labelledby="backup-title">
+      <h3 id="backup-title">Backup</h3>
+      <p class="muted">Your info is only on this phone. Download a backup now and then, so you don't lose it
+        if you clear your browser or get a new phone.</p>
+      <div class="stack">
+        <button type="button" id="backup-download" class="secondary wide">Download backup</button>
+        <button type="button" id="backup-restore" class="secondary wide">Restore backup</button>
+      </div>
+      <p id="backup-error" class="error" role="alert"></p>
+      <p id="backup-result" class="result" role="status"></p>
+    </section>
+
+    <section class="settings-section" aria-labelledby="install-title">
+      <h3 id="install-title">Add to Home Screen</h3>
+      <p>On iPhone: tap the Share button in Safari, then "Add to Home Screen".</p>
+      <p>On Android: tap the ⋮ menu in Chrome, then "Add to Home screen" or "Install app".</p>
+      <p class="muted">Then Budgeteer opens like an app and works without internet.</p>
+    </section>
+  </dialog>
+
   <!-- Add or edit a goal. -->
   <dialog id="goal-sheet" class="sheet" aria-labelledby="goal-title">
     <div class="grip" aria-hidden="true"></div>

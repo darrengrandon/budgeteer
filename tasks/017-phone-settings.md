@@ -2,7 +2,7 @@
 id: 017
 title: Settings on the phone
 depends_on: [016]
-status: todo
+status: done
 ---
 
 ## Goal

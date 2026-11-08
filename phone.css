@@ -538,3 +538,154 @@ dialog.sheet::backdrop {
   color: var(--error);
   font-weight: 600;
 }
+
+/* Settings */
+
+.app-bar .icon-button {
+  margin-right: -0.5rem;
+  color: var(--muted);
+}
+
+.notice > p {
+  margin: 0;
+}
+
+.notice > button {
+  margin-top: 0.75rem;
+}
+
+dialog.sheet.full {
+  height: calc(100dvh - 24px);
+}
+
+.sheet-head {
+  position: sticky;
+  top: -0.5rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -0.5rem -1rem 0;
+  padding: 0.75rem 1rem 0.5rem;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.sheet-head h2 {
+  margin: 0;
+}
+
+.settings-section {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-section:last-child {
+  border-bottom: 0;
+}
+
+.settings-section h3 {
+  font-size: 1.15rem;
+  margin-bottom: 0.4rem;
+}
+
+.split-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.split-inputs .field {
+  margin-bottom: 0.25rem;
+}
+
+.preview {
+  margin: 0.5rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.preview p {
+  margin: 0 0 0.25rem;
+}
+
+.preview ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.money-list,
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.money-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.money-list li:first-child {
+  border-top: 0;
+}
+
+.money-list li span:last-child {
+  font-weight: 700;
+}
+
+.history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.history li:first-child {
+  border-top: 0;
+}
+
+.history-text {
+  flex: 1 1 8rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-what {
+  font-weight: 600;
+}
+
+.history-when {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.history-amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.history-amount.in {
+  color: var(--ok);
+}
+
+.history .secondary {
+  min-height: 44px;
+}
+
+.stack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+#history-toggle {
+  margin-top: 0.5rem;
+}

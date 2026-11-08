@@ -587,12 +587,14 @@ export function moveGoal(state, id, direction) {
 
 /**
  * @typedef {{ kind: 'paycheck', id: string, date: string, cents: number }
- *   | { kind: 'purchase', id: string, date: string, cents: number, note: string }} ActivityItem
+ *   | { kind: 'purchase', id: string, date: string, cents: number, note: string }
+ *   | { kind: 'goalPurchase', id: string, date: string, cents: number, name: string }} ActivityItem
  */
 
 /**
- * Paychecks and purchases together, newest date first. On the same day, purchases come
- * before paychecks (they usually happen after payday), and later-logged records come first.
+ * Paychecks, purchases and goal buys together, newest date first. On the same day, purchases
+ * and goal buys come before paychecks (they usually happen after payday), and later-logged
+ * records come first.
  * @param {State} state
  * @param {number} limit
  * @returns {{ items: ActivityItem[], total: number }}
@@ -602,8 +604,11 @@ export function recentActivity(state, limit) {
   const all = [
     ...state.paychecks.map((p) => ({ kind: /** @type {const} */ ('paycheck'), id: p.id, date: p.date, cents: p.cents })),
     ...state.purchases.map((b) => ({ kind: /** @type {const} */ ('purchase'), id: b.id, date: b.date, cents: b.cents, note: b.note })),
+    ...(state.goalPurchases ?? []).map((x) => ({
+      kind: /** @type {const} */ ('goalPurchase'), id: x.id, date: x.date, cents: x.cents, name: x.name,
+    })),
   ];
-  const kindOrder = { purchase: 0, paycheck: 1 };
+  const kindOrder = { purchase: 0, goalPurchase: 0, paycheck: 1 };
   all.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)
     || kindOrder[a.kind] - kindOrder[b.kind]
     || Number(b.id.slice(1)) - Number(a.id.slice(1)));
