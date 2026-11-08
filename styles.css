@@ -772,8 +772,45 @@ dialog.sheet.full {
 
 /* Second review fixes */
 
+/* The message and its button ("Undo paycheck") share one green box, so a goal card below
+   isn't pushed under the "I got paid" bar on small phones (overnight fix P2). */
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  border-radius: 10px;
+  background: var(--ok-bg);
+}
+
+.status-row:has(.result:empty) {
+  display: none;
+}
+
+.status-row .result {
+  flex: 1 1 auto;
+  margin: 0;
+  background: none;
+}
+
 .status-row .link {
-  margin-top: 0.25rem;
+  padding: 0 0.6rem;
+}
+
+/* The smallest phones (320px): a slightly smaller headline leaves room for the top goal. */
+@media (max-width: 340px) {
+  .headline {
+    font-size: 1.75rem;
+  }
+
+  .headline-card {
+    padding-top: 0.75rem;
+  }
+
+  .goal-card.top {
+    padding-top: 1rem;
+  }
 }
 
 .small-notice {

@@ -25,3 +25,21 @@ test('P3: irregular hours: a normal $175 after a $40 week is saved without a que
   await page.getByRole('button', { name: 'Add paycheck' }).click();
   await expect(page.getByText(/^Nice\. Your \$175\.00/)).toBeVisible();
 });
+
+test('P2: on the smallest phone, "Buy it" is fully above the "I got paid" bar after the paycheck that funds it', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await open(page, new Date('2026-11-21T10:00:00-06:00'));
+  const days = ['2026-10-03', '2026-10-10', '2026-10-17', '2026-10-24', '2026-10-31', '2026-11-07', '2026-11-14'];
+  await seed(page, v2({
+    paychecks: days.map((d, i) => P(`p${i + 1}`, d, 15000)),
+    goals: [{ id: 'g1', name: 'Bike', targetCents: 24000 }],
+  }));
+  await page.getByRole('button', { name: 'I got paid' }).click();
+  await page.getByRole('button', { name: /^Same as last time/ }).click();
+  await page.getByRole('button', { name: 'Add paycheck' }).click();
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByText('Paycheck added.')).toBeVisible();
+  const buy = await page.getByRole('button', { name: 'Buy it: Bike' }).boundingBox();
+  const bar = await page.getByRole('button', { name: 'I got paid' }).boundingBox();
+  expect((buy?.y ?? 0) + (buy?.height ?? 0)).toBeLessThanOrEqual(bar?.y ?? 0);
+});
