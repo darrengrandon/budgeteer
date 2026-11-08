@@ -109,3 +109,13 @@ test('L2: logging the missed payday keeps weekly pay where it was', () => {
   const list = [pay('2026-11-07', 31247), pay('2026-11-21', 31247), pay('2026-12-05', 31247)];
   assert.deepEqual(weeklyPay(list, '2026-12-05'), { cents: 93741, days: 42 }); // $156.24 a week, as before
 });
+
+// Overnight fix P4: the paycheck logged today is the latest payday that has passed, so it is
+// not offered again as "missed" (scenario d: paid every 2 weeks, last Oct 24, opened Nov 14).
+
+test('missedPaydays does not count the payday that today\'s paycheck stands for', () => {
+  const everyTwoWeeks = [pay('2026-10-10', 26000), pay('2026-10-24', 26000)];
+  assert.deepEqual(missedPaydays(everyTwoWeeks, '2026-11-14'), []); // today's paycheck is the Nov 7 one, late
+  assert.deepEqual(missedPaydays(everyTwoWeeks, '2026-11-21'), ['2026-11-07']); // now Nov 7 really was skipped
+  assert.deepEqual(missedPaydays(everyTwoWeeks, '2026-11-27'), ['2026-11-07']);
+});

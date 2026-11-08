@@ -43,8 +43,10 @@ export function paydays(paychecks, todayISO) {
 }
 
 /**
- * Paydays the teen most likely skipped: the expected paydays after the last one (every
- * usual gap) that are at least half a gap in the past (REVIEW.md L2).
+ * Paydays the teen most likely skipped (REVIEW.md L2). Expected paydays come every usual gap
+ * after the last one. The paycheck being logged today stands for the latest of them that has
+ * passed, so only the ones before it are missed (overnight fix P4: offering that one too
+ * counted a single payday twice).
  * @param {PaycheckLike[]} paychecks
  * @param {string} todayISO
  * @returns {string[]} 'YYYY-MM-DD' dates, oldest first
@@ -53,13 +55,11 @@ export function missedPaydays(paychecks, todayISO) {
   const all = paydays(paychecks, todayISO);
   if (all.length === 0) return [];
   const gap = usualGapDays(paychecks, todayISO);
-  const last = dayNumber(all[all.length - 1].date);
-  const latest = dayNumber(todayISO) - Math.ceil(gap / 2);
+  const lastDate = all[all.length - 1].date;
+  const passed = Math.floor((dayNumber(todayISO) - dayNumber(lastDate)) / gap);
   /** @type {string[]} */
   const missed = [];
-  for (let i = 1; last + i * gap <= latest && missed.length < MAX_MISSED; i++) {
-    missed.push(addDays(all[all.length - 1].date, i * gap));
-  }
+  for (let i = 1; i < passed && missed.length < MAX_MISSED; i++) missed.push(addDays(lastDate, i * gap));
   return missed;
 }
 

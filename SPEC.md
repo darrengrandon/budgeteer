@@ -125,8 +125,10 @@ purchases (from before this version, or from a backup) starts with it on.
   A skipped payday does stretch the gap, so the paycheck sheet offers to add it (below).
 
 ### Missed paydays
-Expected paydays after the last one, every usual gap, that are at least half a gap in the
-past (at most 6). Example: last payday Nov 7, every 2 weeks, today Dec 5: Nov 21 was missed.
+Expected paydays come every usual gap after the last payday. The paycheck being logged today
+stands for the latest one that has passed; only the ones before it are missed (at most 6).
+Example: last payday Nov 7, every 2 weeks, today Dec 5: Nov 21 was missed. Today Nov 25:
+nothing was missed (today's paycheck is the Nov 21 one, a few days late).
 
 ### Spend about $X a week
 Weekly pay × Spend percent ÷ 100, rounded to whole dollars.
