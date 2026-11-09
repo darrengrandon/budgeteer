@@ -93,9 +93,9 @@ test('shortDateFrom adds the year only when it is not this year', () => {
 
 test('readyLine: weeks and a date, or that it can be bought', () => {
   const base = { savedCents: 4000, targetCents: 30000, hasPay: true, goalsPercent: 20, todayISO: '2026-11-07' };
-  assert.equal(readyLine({ ...base, weeks: 9 }), 'Ready in about 9 weeks (around Jan 9, 2027)');
-  assert.equal(readyLine({ ...base, weeks: 3 }), 'Ready in about 3 weeks (around Nov 28)');
-  assert.equal(readyLine({ ...base, weeks: 1 }), 'Ready in about 1 week (around Nov 14)');
+  assert.equal(readyLine({ ...base, weeks: 9 }), 'Ready around Jan 9, 2027 (in about 9 weeks)');
+  assert.equal(readyLine({ ...base, weeks: 3 }), 'Ready around Nov 28 (in about 3 weeks)');
+  assert.equal(readyLine({ ...base, weeks: 1 }), 'Ready around Nov 14 (in about 1 week)');
   assert.equal(readyLine({ ...base, savedCents: 30000, weeks: 0 }), 'You can buy it!');
 });
 
@@ -107,7 +107,7 @@ test('readyLine with no paychecks, or nothing going to Goals', () => {
 
 test('goalTimeline is the line under "where your money went"', () => {
   const base = { savedCents: 4000, targetCents: 30000, hasPay: true, goalsPercent: 20, todayISO: '2026-11-07' };
-  assert.equal(goalTimeline({ ...base, name: 'Phone', weeks: 9 }), 'Phone: ready in about 9 weeks (around Jan 9, 2027)');
+  assert.equal(goalTimeline({ ...base, name: 'Phone', weeks: 9 }), 'Phone: ready around Jan 9, 2027 (in about 9 weeks)');
   assert.equal(goalTimeline({ ...base, name: 'Tickets', savedCents: 30000, weeks: 0 }), 'Tickets: you can buy it!');
 });
 
@@ -136,9 +136,9 @@ test('leftToSpend is the big number on the Spending card', () => {
 
 test('L10: readyLine counts from the last payday, so the date stays put between paydays', () => {
   const base = { savedCents: 6249, targetCents: 25000, hasPay: true, goalsPercent: 20, weeks: 7, fromISO: '2026-11-07' };
-  assert.equal(readyLine({ ...base, todayISO: '2026-11-07' }), 'Ready in about 7 weeks (around Dec 26)');
-  assert.equal(readyLine({ ...base, todayISO: '2026-11-20' }), 'Ready in about 6 weeks (around Dec 26)');
-  assert.equal(readyLine({ ...base, todayISO: '2026-11-23' }), 'Ready in about 5 weeks (around Dec 26)');
+  assert.equal(readyLine({ ...base, todayISO: '2026-11-07' }), 'Ready around Dec 26 (in about 7 weeks)');
+  assert.equal(readyLine({ ...base, todayISO: '2026-11-20' }), 'Ready around Dec 26 (in about 6 weeks)');
+  assert.equal(readyLine({ ...base, todayISO: '2026-11-23' }), 'Ready around Dec 26 (in about 5 weeks)');
 });
 
 test('L10: when the date has passed without enough money, it asks for the paycheck', () => {
@@ -148,10 +148,10 @@ test('L10: when the date has passed without enough money, it asks for the payche
 
 test('L14: long waits are said in years', () => {
   const base = { savedCents: 0, targetCents: 500000, hasPay: true, goalsPercent: 20, todayISO: '2026-11-07' };
-  assert.equal(readyLine({ ...base, weeks: 52 }), 'Ready in about 52 weeks (around Nov 6, 2027)');
-  assert.equal(readyLine({ ...base, weeks: 60 }), 'Ready in about a year (around Jan 1, 2028)');
-  assert.equal(readyLine({ ...base, weeks: 159 }), 'Ready in about 3 years (around Nov 24, 2029)');
-  assert.match(readyLine({ ...base, weeks: 32322 }), /^Ready in about 622 years \(around /);
+  assert.equal(readyLine({ ...base, weeks: 52 }), 'Ready around Nov 6, 2027 (in about 52 weeks)');
+  assert.equal(readyLine({ ...base, weeks: 60 }), 'Ready around Jan 1, 2028 (in about a year)');
+  assert.equal(readyLine({ ...base, weeks: 159 }), 'Ready around Nov 24, 2029 (in about 3 years)');
+  assert.match(readyLine({ ...base, weeks: 32322 }), /^Ready around .+ \(in about 622 years\)$/);
 });
 
 test('L1: lastPaycheckNote reminds the teen of a paycheck logged in the last 3 days', () => {

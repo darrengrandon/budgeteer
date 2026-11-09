@@ -20,20 +20,20 @@ test('a lazy teen names a goal, logs paychecks, buys the thing, and is nudged wh
   await first.getByRole('button', { name: 'Add paycheck' }).click();
   // $180 every 2 weeks = $90 a week. Goals: 20% = $18 a week. $90 - $36 = $54 left: 3 weeks.
   await expect(first.getByText('Nice. Your $180.00 became $90.00 to spend (about $45 a week), $54.00 saved, $36.00 for goals.')).toBeVisible();
-  await expect(first.getByText('Concert tickets: ready in about 4 weeks (around Dec 5)')).toBeVisible();
+  await expect(first.getByText('Concert tickets: ready around Dec 5 (in about 4 weeks)')).toBeVisible();
   await first.getByRole('button', { name: 'Done' }).click();
 
   await expect(page.locator('#headline')).toHaveText('Spend about $45 a week');
   await expect(page.getByText('Out of about $90 a week of pay.')).toBeVisible();
   const card = page.locator('.goal-card').first();
   await expect(card).toContainText('$36 of $90');
-  await expect(card).toContainText('Ready in about 4 weeks (around Dec 5)');
+  await expect(card).toContainText('Ready around Dec 5 (in about 4 weeks)');
 
   // Curious about a different split: the preview changes, nothing is saved.
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByLabel('Spend %').fill('40');
   await page.getByLabel('Goals %').fill('30');
-  await expect(page.locator('#split-preview')).toContainText('Concert tickets: ready in about 2 weeks (around Nov 21)');
+  await expect(page.locator('#split-preview')).toContainText('Concert tickets: ready around Nov 21 (in about 2 weeks)');
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('#headline')).toHaveText('Spend about $45 a week');
 
@@ -45,7 +45,7 @@ test('a lazy teen names a goal, logs paychecks, buys the thing, and is nudged wh
   const sheet = page.getByRole('dialog', { name: 'How much did you get paid?' });
   await sheet.getByRole('button', { name: 'Same as last time ($180.00)' }).click();
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(sheet.getByText('Concert tickets: ready in about 2 weeks (around Dec 5)')).toBeVisible();
+  await expect(sheet.getByText('Concert tickets: ready around Dec 5 (in about 2 weeks)')).toBeVisible();
   await sheet.getByRole('button', { name: 'Done' }).click();
 
   // Two weeks later again: the goal is funded, and they buy it for a bit less.

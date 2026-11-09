@@ -14,7 +14,7 @@ test('first run with a goal: name it, log a paycheck, and see what to spend and 
   await sheet.getByLabel('Take-home amount').fill('200');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
   await expect(sheet.getByText('Nice. Your $200.00 became $100.00 to spend (about $50 a week), $60.00 saved, $40.00 for goals.')).toBeVisible();
-  await expect(sheet.getByText('Phone: ready in about 14 weeks (around Feb 13, 2027)')).toBeVisible();
+  await expect(sheet.getByText('Phone: ready around Feb 13, 2027 (in about 14 weeks)')).toBeVisible();
   await sheet.getByRole('button', { name: 'Done' }).click();
 
   await expect(page.locator('#headline')).toHaveText('Spend about $50 a week');
@@ -22,7 +22,7 @@ test('first run with a goal: name it, log a paycheck, and see what to spend and 
   const card = page.locator('.goal-card').first();
   await expect(card).toContainText('Phone');
   await expect(card).toContainText('$40 of $300');
-  await expect(card).toContainText('Ready in about 14 weeks (around Feb 13, 2027)');
+  await expect(card).toContainText('Ready around Feb 13, 2027 (in about 14 weeks)');
   await expect(page.getByRole('button', { name: 'I got paid' })).toBeVisible();
 
   await page.reload();

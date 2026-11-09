@@ -31,13 +31,13 @@ test('after the first paycheck, the five answers show in order', async ({ page }
 
 test('tapping "Every week" saves it at once and updates the goal line and Home', async ({ page }) => {
   const sheet = await firstPaycheck(page);
-  await expect(sheet.locator('#pay-timeline')).toHaveText('Phone: ready in about 14 weeks (around Feb 13, 2027)');
+  await expect(sheet.locator('#pay-timeline')).toHaveText('Phone: ready around Feb 13, 2027 (in about 14 weeks)');
   const weekly = sheet.getByRole('button', { name: 'Every week' });
   await weekly.click();
   await expect(weekly).toHaveAttribute('aria-pressed', 'true');
   await expect(sheet.getByRole('status')).toHaveText('Saved. You can change it in Settings.');
   expect(await savedFrequency(page)).toBe('weekly');
-  await expect(sheet.locator('#pay-timeline')).toHaveText('Phone: ready in about 7 weeks (around Dec 26)');
+  await expect(sheet.locator('#pay-timeline')).toHaveText('Phone: ready around Dec 26 (in about 7 weeks)');
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('#headline')).toHaveText('Spend about $100 a week');
 });

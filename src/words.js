@@ -162,7 +162,8 @@ export function readyLine({ savedCents, targetCents, weeks, hasPay, goalsPercent
   const date = dateISO ?? addDays(fromISO, weeks * 7);
   const daysLeft = dayNumber(date) - dayNumber(todayISO);
   if (daysLeft <= 0) return 'Should be ready by now. Log your paycheck to check.';
-  return `Ready in about ${howLong(Math.ceil(daysLeft / 7))} (around ${shortDateFrom(date, todayISO)})`;
+  // The date first: it answers "when can I buy it?" (lazy-v3, docs/DESIGN.md).
+  return `Ready around ${shortDateFrom(date, todayISO)} (in about ${howLong(Math.ceil(daysLeft / 7))})`;
 }
 
 /**
@@ -248,7 +249,7 @@ export function missedChip(dates, todayISO) {
 }
 
 /**
- * One goal's line after logging a paycheck: "Phone: ready in about 9 weeks (around Jan 9)".
+ * One goal's line after logging a paycheck: "Phone: ready around Jan 9 (in about 9 weeks)".
  * @param {{ name: string, savedCents: number, targetCents: number, weeks: number, hasPay: boolean,
  *   goalsPercent: number, todayISO: string }} args
  * @returns {string}
@@ -335,7 +336,7 @@ export function explainGoalAmounts({ name, savedCents, targetCents, first }) {
 }
 
 /**
- * How the date in "Ready in about N weeks (around ...)" was found.
+ * How the date in "Ready around ... (in about N weeks)" was found.
  * @param {{ perPaydayCents: number, neededCents: number, dateISO: string, todayISO: string, first: boolean }} args
  * @returns {string}
  */

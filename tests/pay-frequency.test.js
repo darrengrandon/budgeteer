@@ -77,7 +77,7 @@ test('goal dates step by the answer and are never early', () => {
   state = addGoal(state, { name: 'Laptop', targetCents: 50000 });
   const plan = homePlan(state, '2026-11-07');
   assert.equal(plan.headline, 'Spend about $115 a week');
-  assert.equal(plan.goals[0].line, 'Ready in about 8 weeks (around Jan 1, 2027)');
+  assert.equal(plan.goals[0].line, 'Ready around Jan 1, 2027 (in about 8 weeks)');
   assert.equal(plan.nudge, false);
 });
 

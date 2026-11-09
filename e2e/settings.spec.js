@@ -60,7 +60,7 @@ test('changing the split previews the new numbers and saves only on "Save split"
   await expect(sheet.getByText('Adds up to 100%. Good to go.')).toBeVisible();
   const preview = sheet.locator('#split-preview');
   await expect(preview).toContainText('Spend about $40 a week');
-  await expect(preview).toContainText('Phone: ready in about 10 weeks (around Jan 16, 2027)');
+  await expect(preview).toContainText('Phone: ready around Jan 16, 2027 (in about 10 weeks)');
 
   // Not saved yet: closing and reloading keeps the old split.
   await sheet.getByRole('button', { name: 'Done' }).click();
@@ -78,7 +78,7 @@ test('changing the split previews the new numbers and saves only on "Save split"
   await expect(again.locator('#money')).toContainText('Goals$40.00');
   await again.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('#headline')).toHaveText('Spend about $40 a week');
-  await expect(page.locator('.goal-card').first()).toContainText('Ready in about 10 weeks (around Jan 16, 2027)');
+  await expect(page.locator('.goal-card').first()).toContainText('Ready around Jan 16, 2027 (in about 10 weeks)');
 });
 
 test('a split that does not total 100 is explained and not saved', async ({ page }) => {

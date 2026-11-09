@@ -33,7 +33,7 @@ test('a: first run with a goal, first paycheck, home screen @se @webkit', async 
   await page.locator('#pay-sheet').getByLabel('Take-home amount').fill('312.47');
   await story.caption('Tap 2: Add paycheck. Her goal date appears right away');
   await page.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(page.getByText(/^AirPods: ready in about/)).toBeVisible();
+  await expect(page.getByText(/^AirPods: ready around/)).toBeVisible();
   await story.result('first-result', 'After the first paycheck: where the money went and the goal date');
   await story.caption('Tap 3: Done. This is the home screen she will see from now on');
   await page.getByRole('button', { name: 'Done' }).click();

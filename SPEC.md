@@ -46,7 +46,7 @@ paychecks logged from then on; each paycheck keeps the split it was logged with.
    in whole dollars. Before the first paycheck: "Log your first paycheck", which can be
    tapped to open the paycheck sheet.
 2. Goal cards. The top goal is big: name, progress bar, "$40 of $300", and either
-   "Ready in about N weeks (around <date>)" or "You can buy it!" with a "Buy it"
+   "Ready around <date> (in about N weeks)" or "You can buy it!" with a "Buy it"
    button. Other goals are smaller cards with the same line. A lower goal whose price is
    already in Goals says "The money's already in Goals. Move it to the top to buy it now."
    Each card has a button for its actions (edit, move up, move to top, remove). An "Add a
@@ -66,7 +66,7 @@ the data changes, so they never describe something that was undone.
 Every number on Home has a dotted line under it and can be tapped: one plain sentence opens
 right below it saying where the number comes from ("You get about $100 a week and 50% of each
 paycheck goes to Spend, so about $50 a week is yours to spend."). That covers the headline,
-the pay line, each goal's "$40 of $300" and "Ready in about..." line, and with tracking on,
+the pay line, each goal's "$40 of $300" and "Ready around..." line, and with tracking on,
 "left to spend" and each latest amount. One is open at a time; a second tap closes it.
 
 Under the pay line, "Same as last time: add $150.00" logs the last paycheck's amount again,

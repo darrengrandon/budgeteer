@@ -51,14 +51,14 @@ test('(b) changing the answer in Settings changes the numbers at once', async ({
   await expect(sheet.locator('#often-result')).toHaveText('Saved. Spend about $100 a week.');
   expect(await savedFrequency(page)).toBe('weekly');
   await expect(page.locator('#headline')).toHaveText('Spend about $100 a week');
-  await expect(page.locator('.goal-card').first()).toContainText('Ready in about 7 weeks (around Dec 26)');
+  await expect(page.locator('.goal-card').first()).toContainText('Ready around Dec 26 (in about 7 weeks)');
 
   await sheet.getByRole('radio', { name: 'Once a month' }).check();
   await expect(sheet.locator('#often-result')).toHaveText('Saved. Spend about $23 a week.');
   expect(await savedFrequency(page)).toBe('monthly');
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('#headline')).toHaveText('Spend about $23 a week');
-  await expect(page.locator('.goal-card').first()).toContainText('Ready in about 31 weeks (around Jun 8, 2027)');
+  await expect(page.locator('.goal-card').first()).toContainText('Ready around Jun 8, 2027 (in about 31 weeks)');
 });
 
 test('(c) "It\'s different every time" still learns from the logged dates', async ({ page }) => {

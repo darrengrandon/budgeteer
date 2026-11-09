@@ -33,7 +33,7 @@ test('with no goals, Home invites one; adding it shows its card and date', async
   await addGoal(page, 'Phone', '300');
   await expect(page.getByText('Added "Phone".')).toBeVisible();
   await expect(cards(page).first()).toContainText('$40 of $300');
-  await expect(cards(page).first()).toContainText('Ready in about 14 weeks (around Feb 13, 2027)');
+  await expect(cards(page).first()).toContainText('Ready around Feb 13, 2027 (in about 14 weeks)');
   await expect(page.getByText('Saving for something?')).toBeHidden();
 });
 

@@ -16,7 +16,7 @@ add it here.
 | **Goal** | Something the teen saves for: a name and a price (`targetCents`). Goals are in priority order. | `state.goals` |
 | **Top goal** | The first goal. It gets Goals money first and is shown big on Home. | `state.goals[0]` |
 | **Funded** | A goal whose whole price is covered by Goals money (after the goals above it). | `allocateToGoals()` |
-| **Ready in about N weeks** | Weeks until a goal is funded at the current weekly pay and Goals percent, rounded up, with a date. | `readyLine()` |
+| **Ready around <date>** | The payday when a goal will be funded at the current pay and Goals percent, then the weeks from today, rounded up: "Ready around Dec 19 (in about 7 weeks)". | `readyLine()` |
 | **Buy it** | Recording that a funded goal was bought: the real price (at most the goal's price) leaves Goals, the goal is removed, a goal purchase is kept. | `buyGoal()`, `state.goalPurchases` |
 | **Goal purchase** | The record a Buy it leaves behind: date, cents, goal name. Undoing it puts the money back in Goals. | `removeGoalPurchase()` |
 | **Track my spending** | A setting, off by default. When on, the teen can log purchases from Spend and see what is left. | `state.settings.trackSpending` |

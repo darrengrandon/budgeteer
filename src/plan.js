@@ -21,7 +21,7 @@ import {
  * @property {number} weeks
  * @property {boolean} funded the whole price is covered: "Buy it" can be offered
  * @property {string} amounts "$40 of $300"
- * @property {string} line "Ready in about 9 weeks (around Jan 9)" or "You can buy it!"
+ * @property {string} line "Ready around Jan 9 (in about 9 weeks)" or "You can buy it!"
  * @property {boolean} canMoveToBuy not first, but Goals already holds its price (REVIEW.md L6)
  * @property {string} amountsExplain what "$40 of $300" means (step 3a)
  * @property {string} lineExplain how the ready date was found; '' when the line has no number
@@ -112,8 +112,8 @@ export function homePlan(state, todayISO, split = state.split) {
         amounts: goalAmounts(savedCents, goal.targetCents),
         line,
         amountsExplain: explainGoalAmounts({ name: goal.name, savedCents, targetCents: goal.targetCents, first: index === 0 }),
-        // Only "Ready in about N weeks (around ...)" has a number to explain (readyLine).
-        lineExplain: line.startsWith('Ready in about') && dateISO
+        // Only "Ready around ... (in about N weeks)" has a number to explain (readyLine).
+        lineExplain: line.startsWith('Ready around') && dateISO
           ? explainReady({ perPaydayCents: perPayday, neededCents, dateISO, todayISO, first: index === 0 })
           : '',
       };

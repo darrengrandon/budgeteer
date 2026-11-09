@@ -31,11 +31,11 @@ test('the headline, the pay line and each goal\'s numbers explain themselves', a
   const [phone, shoes] = [page.locator('.goal-card').nth(0), page.locator('.goal-card').nth(1)];
   await explains(page, phone.getByRole('button', { name: '$40 of $300' }),
     'You have $40 saved toward Phone, which costs $300, so $260 to go.');
-  await explains(page, phone.getByRole('button', { name: 'Ready in about 14 weeks (around Feb 13, 2027)' }),
+  await explains(page, phone.getByRole('button', { name: 'Ready around Feb 13, 2027 (in about 14 weeks)' }),
     'About $40 of each paycheck goes to Goals, so the $260 still needed should be there by the payday around Feb 13, 2027.');
   await explains(page, shoes.getByRole('button', { name: '$0 of $50' }),
     'Goals money fills your goals from the top, so Shoes has $0 of its $50 so far, with $50 to go.');
-  await explains(page, shoes.getByRole('button', { name: /^Ready in about/ }),
+  await explains(page, shoes.getByRole('button', { name: /^Ready around/ }),
     'About $40 of each paycheck goes to Goals, and the $310 needed for this goal and the ones above it should be there by the payday around Feb 27, 2027.');
 });
 

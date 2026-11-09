@@ -26,7 +26,7 @@ test('after one visit, the app opens and logs a paycheck with no connection', as
   await welcome(page, { goal: 'Phone', price: '300' });
   await page.locator('#pay-sheet').getByLabel('Take-home amount').fill('200');
   await page.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(page.getByText('Phone: ready in about 14 weeks (around Feb 13, 2027)')).toBeVisible();
+  await expect(page.getByText('Phone: ready around Feb 13, 2027 (in about 14 weeks)')).toBeVisible();
   await page.getByRole('button', { name: 'Done' }).click();
   await page.reload();
   await expect(page.locator('#headline')).toHaveText('Spend about $50 a week');
