@@ -372,7 +372,7 @@ input[aria-invalid="true"] {
 .nudge {
   width: 100%;
   min-height: 48px;
-  margin: var(--space-2) 0 0;
+  margin: 0;
   border: 0;
   border-radius: var(--radius-full);
   background: var(--notice-bg);
@@ -390,14 +390,26 @@ input[aria-invalid="true"] {
   font-size: 1.75rem;
 }
 
-/* Home: the goals first */
+/* Home: one vertical rhythm. Every block, and every goal card, is --space-4 apart. */
+
+#home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+}
+
+#home > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
 
 .goal-cards {
   list-style: none;
-  margin: var(--space-2) 0 0;
+  margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 /* Other goals are objects: a card with a name, a date, an amount and a quiet bar. */
@@ -410,8 +422,8 @@ input[aria-invalid="true"] {
 /* The top goal is the answer, not a box: big type straight on the page. The side padding only
    gives the funded tint room to breathe. */
 .goal-card.top {
-  margin: 0 calc(-1 * var(--space-3)) var(--space-4);
-  padding: var(--space-3) var(--space-3) var(--space-4);
+  margin: calc(-1 * var(--space-3));
+  padding: var(--space-3);
   background: transparent;
 }
 
@@ -540,23 +552,20 @@ progress::-moz-progress-bar {
 }
 
 .empty-goals {
-  margin: var(--space-4) 0 var(--space-2);
+  margin: 0;
 }
 
 #add-goal {
-  margin-top: var(--space-2);
+  align-self: flex-start;
 }
 
 /* Home: then one quiet line about spending */
 
-.spend-line {
-  margin-top: var(--space-6);
-}
-
+/* "Spend about $78 a week": regular weight, no marks, right under the goals. */
 .headline {
   margin: 0;
   font-size: var(--type-heading);
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.3;
 }
 
@@ -586,7 +595,7 @@ body:has(dialog[open]) .same-again {
 /* Track my spending, the backup reminder, the iPhone install help: separate objects */
 
 .card {
-  margin-top: var(--space-5);
+  margin-top: var(--space-5); /* outside Home; on Home the rhythm above sets the gap */
   padding: var(--space-4);
   border-radius: var(--radius-l);
   background: var(--card);
