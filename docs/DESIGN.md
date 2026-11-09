@@ -12,11 +12,12 @@ spacing and motion; `styles.css` uses exactly these tokens.
 3. **Calm by default.** Space separates things, not lines or boxes. Color is rare: one accent
    for the action you can take, and state colors only when something is right, wrong or due.
 4. **Cards only for objects.** A goal you are saving for (other than the top one) is a card:
-   name, date, amount, a quiet bar. Sheets are surfaces. Nothing else gets a box.
+   name, amount, a quiet bar, then the date. Sheets are surfaces. Nothing else gets a box.
 5. **Thumb first.** The main action ("I got paid") sits at the bottom, in reach of a thumb,
    and stays put. Messages about what just happened ("Paycheck added. Undo") appear right
    above it.
-6. **Numbers line up.** All digits use tabular numerals, so amounts don't jiggle as they change.
+6. **Numbers line up, unmarked.** All digits use tabular numerals, so amounts don't jiggle as
+   they change. Numbers carry no underlines or other marks; a goal card's "?" explains them.
 7. **Nothing moves, except once.** The only motion is the moment a goal becomes fully saved.
 
 ## Not this
@@ -57,10 +58,10 @@ no web fonts. Three weights: 400, 600, 700. Digits are tabular everywhere.
 | Step | Size | Line height | Weight | Use |
 |---|---|---|---|---|
 | `--type-display` | 2.5rem (40px) | 1.05 | 700 | The top goal's date, "You can buy it!" |
-| `--type-title` | 1.5rem (24px) | 1.2 | 700 | "Nice.", sheet titles |
-| `--type-heading` | 1.125rem (18px) | 1.3 | 600 | Goal names, section headings, the spend line |
+| `--type-title` | 1.5rem (24px) | 1.2 | 700 | The payoff on the paycheck result, sheet titles |
+| `--type-heading` | 1.125rem (18px) | 1.3 | 600 | Goal names, section headings (the spend line uses this size at 400) |
 | `--type-body` | 1.0625rem (17px) | 1.45 | 400 | Everything else |
-| `--type-small` | 0.9375rem (15px) | 1.4 | 400 | Quiet lines: amounts, help, explanations |
+| `--type-small` | 0.9375rem (15px) | 1.4 | 400 | Quiet lines: amounts, where the money went, help, explanations |
 
 Inputs are 18px or more, so iPhone doesn't zoom in. At 320px the display step drops to 2rem.
 
@@ -73,8 +74,9 @@ Inputs are 18px or more, so iPhone doesn't zoom in. At 320px the display step dr
 | `--radius-l` | 20px: goal cards, sheet tops |
 | `--radius-full` | 999px: chips, progress bars |
 
-The page has a 16px side margin plus the safe areas. Every tap target is at least 44 by 44px,
-and the main button is 60px tall. Everything works at 320px wide.
+The page has a 16px side margin plus the safe areas. Home has one vertical rhythm: every block
+and every goal card is `--space-4` (16px) apart. Every tap target is at least 44 by 44px, and
+the main button is 60px tall. Everything works at 320px wide.
 
 ## Motion
 - **Only one moment:** when a goal becomes fully saved, its card's green tint fades out over
@@ -84,14 +86,25 @@ and the main button is 60px tall. Everything works at 320px wide.
 - No other animation or transition: sheets appear without sliding, and switches change
   without sliding.
 
+## Controls
+- **Choice chips:** pill-shaped, outlined; the chosen one is filled with the accent. One control
+  for "How often do you get paid?" everywhere (the paycheck result and Settings). It is a radio
+  group: a tap chooses, arrow keys move, and only the chosen chip is in the Tab order.
+- **"?" on a goal card:** a small circled "?" in a 44px target, between the name and the "⋯"
+  menu. It opens one plain sentence about that card's numbers, under the date; a second tap
+  closes it.
+
 ## Screens
-- **Home**, top to bottom: the top goal (name, "Ready around Dec 19" with the date in the
-  display size, "(in about 7 weeks)", "$40 of $300", a thin bar, "Buy it" when funded); the
-  other goals as cards; "+ Add a goal"; one quiet line "Spend about $78 a week" with the pay
-  line under it; then "I got paid" at the bottom. Undo messages appear just above it.
-- **Paycheck result:** "Nice." as a title, then one sentence about where the money went, then
-  each goal's new date, then "Done".
-- **Settings:** a list of sections separated by space and a hairline. A heading, one quiet
-  line of help, then the control.
-- Numbers that explain themselves have a dotted underline. A tap opens one quiet sentence
-  under the number.
+- **Home**, top to bottom: the top goal (name, "?", "⋯"; "$40 of $300"; a thin bar; "Ready
+  around Dec 19" with the date in the display size and "(in about 7 weeks)" quiet; "Buy it"
+  when funded). Then the other goals as cards in the same order: amount, bar, date. Then
+  directly under them one quiet line in regular weight, "Spend about $78 a week", with the pay
+  line under it. Then "+ Add a goal". "I got paid" stays at the bottom, with Undo messages
+  just above it.
+- **Paycheck result:** the payoff first, each goal's new date ("AirPods: ready around Dec 19
+  (in about 6 weeks)") in the title size. Then one short quiet line about where the money
+  went, "From your $312.47: $156.24 to spend (about $78 a week), $93.74 saved, $62.49 for
+  goals.", with a small "Undo" beside it. Then, after the first paycheck only, the "How often
+  do you get paid?" chips. Then "Done".
+- **Settings:** sections separated by space and a hairline, each a heading, one quiet line of
+  help, then the control. "How often do you get paid?" comes first, above "Your split".
