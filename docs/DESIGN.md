@@ -87,24 +87,44 @@ the main button is 60px tall. Everything works at 320px wide.
   without sliding.
 
 ## Controls
+- **One main button per screen:** full width, the accent, 60px ("I got paid", "Next", "Add paycheck",
+  "Done", "Save goal"). "Download backup" is the one bordered button: something we want done.
+- **Quiet text actions** for everything else ("Cancel", "Skip for now", "Undo", "Not now",
+  "+ Add a goal", "Log a purchase", "Move up", "Remove" in History): the accent color, 600 weight,
+  no underline, no border, still 44px tall. A destructive one ("Remove this goal") uses the error
+  color.
+- **One focus ring:** 3px in the accent, 2px out from the edge, on everything. On a field with an
+  error the same ring turns red, and the field's 1px border turns red too (no thicker border).
 - **Choice chips:** pill-shaped, outlined; the chosen one is filled with the accent. One control
   for "How often do you get paid?" everywhere (the paycheck result and Settings). It is a radio
   group: a tap chooses, arrow keys move, and only the chosen chip is in the Tab order.
 - **"?" on a goal card:** a small circled "?" in a 44px target, between the name and the "⋯"
-  menu. It opens one plain sentence about that card's numbers, under the date; a second tap
-  closes it.
+  menu, and lighter than it (a hairline ring, a regular-weight mark). It opens one plain sentence
+  about that card's numbers, under the date; a second tap closes it.
 
 ## Screens
 - **Home**, top to bottom: the top goal (name, "?", "⋯"; "$40 of $300"; a thin bar; "Ready
   around Dec 19" with the date in the display size and "(in about 7 weeks)" quiet; "Buy it"
-  when funded). Then the other goals as cards in the same order: amount, bar, date. Then
+  when funded). The amount sits about 8px above its bar. Then the other goals as cards in the
+  same order: amount, bar, date. Then
   directly under them one quiet line in regular weight, "Spend about $78 a week", with the pay
   line under it. Then "+ Add a goal". "I got paid" stays at the bottom, with Undo messages
-  just above it.
+  just above it, and the page leaves room so the last line scrolls fully above the bar.
 - **Paycheck result:** the payoff first, each goal's new date ("AirPods: ready around Dec 19
   (in about 6 weeks)") in the title size. Then one short quiet line about where the money
   went, "From your $312.47: $156.24 to spend (about $78 a week), $93.74 saved, $62.49 for
   goals.", with a small "Undo" beside it. Then, after the first paycheck only, the "How often
-  do you get paid?" chips. Then "Done".
+  do you get paid?" chips. "Done" is pinned at the bottom of the sheet: only the content above
+  it scrolls, so it is on screen at 320px and with large text.
 - **Settings:** sections separated by space and a hairline, each a heading, one quiet line of
-  help, then the control. "How often do you get paid?" comes first, above "Your split".
+  help, then the control. "How often do you get paid?" comes first, above "Your split". All text
+  other than headings and fields is the body size; help and dates are quiet by color, not size.
+- **First run:** a title, one quiet line, the two fields, "Next", then "Skip for now" and
+  "Restore a backup" side by side from the left edge.
+- **Sheets** (paycheck, goal, buy, purchase): a title, the fields, the main button, then quiet
+  text actions. A reminder ("You already logged $156.00 today.") is a quiet line; only a
+  question that needs an answer ("Log another paycheck?") gets the amber state box.
+- **The spending card** (only with Track my spending on): what is left, "Log a purchase", and the
+  latest three under a hairline.
+- Nothing covers content with a shadow or a fade: the "I got paid" bar is solid with a hairline
+  above it, and sheets sit on a plain dimmed backdrop.
