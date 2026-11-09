@@ -910,6 +910,41 @@ body:has(dialog[open]) .same-again {
   text-underline-offset: 0.25em;
 }
 
+/* Each one is a 44px tap target, like every button. The padding grows the box and the same
+   negative margins give the room back, so nothing on Home moves (the 320px "Buy it" fixes
+   P2/P2b depend on that). The margins are each element's own margins minus the padding. */
+[data-explain] {
+  padding-block: 10px;
+}
+
+.headline[data-explain] {
+  margin-block: -10px;
+}
+
+/* Two negative margins collapse to the larger one, not their sum, so the pay line takes back
+   both its own padding and the headline's (-10px) here: 0.4rem apart, as before. */
+.basis[data-explain] {
+  margin-block: calc(0.4rem - 20px) -10px;
+}
+
+.goal-amounts[data-explain] {
+  margin-block: calc(0.15rem - 10px) calc(0.6rem - 10px);
+}
+
+.goal-ready[data-explain] {
+  margin-block: calc(0.6rem - 10px) -10px;
+}
+
+.left[data-explain] {
+  margin-block: -10px calc(0.75rem - 10px);
+}
+
+.history-amount[data-explain] {
+  min-width: 44px;
+  margin-block: -10px;
+  text-align: right;
+}
+
 .explain {
   margin: 0.25rem 0 0.75rem;
   padding: 0.5rem 0.75rem;
