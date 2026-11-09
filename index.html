@@ -149,8 +149,10 @@
       </div>
     </form>
     <!-- The payoff first: each goal's new date. Then one short line about where the money went
-         (with a small Undo beside it), the optional pay question, and Done. -->
+         (with a small Undo beside it) and the optional pay question. Only this part scrolls;
+         Done stays pinned at the bottom. -->
     <div id="pay-done" hidden>
+      <div class="sheet-body">
       <ul id="pay-timeline" class="timeline"></ul>
       <div class="pay-money">
         <p id="pay-sentence" class="pay-sentence"></p>
@@ -164,6 +166,7 @@
         <!-- The same chips as in Settings (filled in by app.js). -->
         <div id="pay-often-chips" class="chips" role="radiogroup" aria-labelledby="pay-often-title"></div>
         <p id="pay-often-saved" class="often-saved muted" role="status"></p>
+      </div>
       </div>
       <button type="button" id="pay-close" class="primary big">Done</button>
     </div>

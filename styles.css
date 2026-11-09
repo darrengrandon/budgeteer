@@ -762,8 +762,31 @@ dialog.sheet.full {
   padding: 0 var(--space-1) 0 var(--space-2);
 }
 
+/* Done is pinned: the sheet becomes a column, only .sheet-body scrolls, and Done sits under it
+   inside the sheet's bottom padding (which keeps the safe area). */
+dialog.sheet[open]:has(> #pay-done:not([hidden])) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#pay-done:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#pay-done .sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 #pay-close {
-  margin-top: var(--space-5);
+  flex: none;
+  margin-top: var(--space-3);
 }
 
 .often-title {
