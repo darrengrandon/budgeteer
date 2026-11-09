@@ -1286,7 +1286,7 @@ backupFile.addEventListener('change', async () => {
   const firstRun = state === null;
   const fail = (/** @type {string} */ reason) => {
     el(firstRun ? 'welcome-restore-error' : 'backup-error').textContent =
-      `That file couldn't be restored, so nothing was changed. ${reason}`;
+      `Nothing was changed. ${reason}`;
   };
   if (file.size > LIMITS.maxBackupChars) {
     fail('It is too big to be a Budgeteer backup.');

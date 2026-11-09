@@ -219,11 +219,11 @@ test('a damaged or future-dated backup is refused and changes nothing', async ({
   const sheet = await openSettings(page);
   await restoreFile(page, 'broken.json', '{"version":2,"split":', 'Restore backup');
   await expect(sheet.getByRole('alert')).toHaveText(
-    "That file couldn't be restored, so nothing was changed. That file isn't a Budgeteer backup, or it's damaged.");
+    "Nothing was changed. That file isn't a Budgeteer backup, or it's damaged.");
   const future = v2({ paychecks: [P('p1', '2026-11-09', 20000)] });
   await restoreFile(page, 'future.json', JSON.stringify(future), 'Restore backup');
   await expect(sheet.getByRole('alert')).toHaveText(
-    "That file couldn't be restored, so nothing was changed. Paycheck 1's date is in the future.");
+    "Nothing was changed. Paycheck 1's date is in the future.");
   await sheet.getByRole('button', { name: 'Done' }).click();
   expect(await screen(page)).toEqual(before);
 });
