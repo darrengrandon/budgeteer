@@ -158,15 +158,10 @@
       <p id="pay-undo-error" class="error" role="alert"></p>
       <p id="pay-extra" class="muted" hidden></p>
       <!-- Only after the first paycheck (docs/adr/0007). A tap saves at once. -->
-      <div id="pay-often" class="often" role="group" aria-labelledby="pay-often-title" hidden>
+      <div id="pay-often" class="often" hidden>
         <p id="pay-often-title" class="often-title">How often do you get paid?</p>
-        <div class="chips">
-          <button type="button" class="chip" data-often="weekly" aria-pressed="false">Every week</button>
-          <button type="button" class="chip" data-often="biweekly" aria-pressed="false">Every 2 weeks</button>
-          <button type="button" class="chip" data-often="twice-monthly" aria-pressed="false">Twice a month</button>
-          <button type="button" class="chip" data-often="monthly" aria-pressed="false">Once a month</button>
-          <button type="button" class="chip" data-often="varies" aria-pressed="false">It's different every time</button>
-        </div>
+        <!-- The same chips as in Settings (filled in by app.js). -->
+        <div id="pay-often-chips" class="chips" role="radiogroup" aria-labelledby="pay-often-title"></div>
         <p id="pay-often-saved" class="often-saved muted" role="status"></p>
       </div>
       <button type="button" id="pay-close" class="primary big">Done</button>
@@ -181,6 +176,14 @@
       <h2 id="settings-title">Settings</h2>
       <button type="button" id="settings-done" class="link">Done</button>
     </div>
+
+    <section class="settings-section" aria-labelledby="often-title">
+      <h3 id="often-title">How often do you get paid?</h3>
+      <p id="often-help" class="muted">This sets your weekly numbers and goal dates. If it's different every time, Budgeteer goes by the dates you log.</p>
+      <!-- The same chips as on the paycheck result (filled in by app.js). -->
+      <div id="often-chips" class="chips" role="radiogroup" aria-labelledby="often-title" aria-describedby="often-help"></div>
+      <p id="often-result" class="result" role="status"></p>
+    </section>
 
     <section class="settings-section" aria-labelledby="split-title">
       <h3 id="split-title">Your split</h3>
@@ -212,19 +215,6 @@
         <button type="submit" class="primary wide">Save split</button>
         <p id="split-result" class="result" role="status"></p>
       </form>
-    </section>
-
-    <section class="settings-section" aria-labelledby="often-title">
-      <h3 id="often-title">How often do you get paid?</h3>
-      <p id="often-help" class="muted">This sets your weekly numbers and goal dates. If it's different every time, Budgeteer goes by the dates you log.</p>
-      <div class="radio-list" role="radiogroup" aria-labelledby="often-title" aria-describedby="often-help">
-        <label class="radio-row"><input type="radio" name="often" value="weekly"> Every week</label>
-        <label class="radio-row"><input type="radio" name="often" value="biweekly"> Every 2 weeks</label>
-        <label class="radio-row"><input type="radio" name="often" value="twice-monthly"> Twice a month</label>
-        <label class="radio-row"><input type="radio" name="often" value="monthly"> Once a month</label>
-        <label class="radio-row"><input type="radio" name="often" value="varies"> It's different every time</label>
-      </div>
-      <p id="often-result" class="result" role="status"></p>
     </section>
 
     <section class="settings-section" aria-labelledby="money-title">

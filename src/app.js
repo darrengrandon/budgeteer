@@ -19,6 +19,7 @@ import {
   addPurchase,
   setTrackSpending,
   setPayFrequency,
+  PAY_FREQUENCIES,
   removePaycheck,
   removePurchase,
   removeGoalPurchase,
@@ -42,6 +43,7 @@ import {
   paycheckSentence,
   goalTimeline,
   explainActivity,
+  PAY_FREQUENCY_LABELS,
   buySentence,
   splitTotalHint,
   shortDate,
@@ -513,7 +515,7 @@ function showPayResult(added, backfill, isFirst) {
     : backfill.length > 1 ? `Also added the ${backfill.length} paychecks from ${when}.` : '';
   el('pay-extra').hidden = backfill.length === 0;
   el('pay-often').hidden = !isFirst;
-  for (const chip of oftenChips) chip.setAttribute('aria-pressed', 'false');
+  resultChoices.show(null);
   el('pay-often-saved').textContent = '';
   drawPayResult();
   el('pay-entry').hidden = true;
@@ -537,17 +539,55 @@ function drawPayResult() {
   }));
 }
 
-const oftenChips = /** @type {HTMLButtonElement[]} */ ([...el('pay-often').querySelectorAll('button[data-often]')]);
-for (const chip of oftenChips) {
-  chip.addEventListener('click', () => {
-    if (!state) return;
-    const frequency = /** @type {import('./storage.js').PayFrequency} */ (chip.dataset.often);
-    if (!commit(setPayFrequency(state, frequency))) return;
-    for (const other of oftenChips) other.setAttribute('aria-pressed', String(other === chip));
-    el('pay-often-saved').textContent = 'Saved. You can change it in Settings.';
-    drawPayResult();
+/**
+ * The "How often do you get paid?" chips: one control for the paycheck result and Settings
+ * (docs/DESIGN.md). A radio group: a tap chooses, arrow keys move and choose, and only the
+ * chosen chip (or the first, if none is) is in the Tab order.
+ * @param {HTMLElement} group the empty radiogroup to fill
+ * @param {(frequency: import('./storage.js').PayFrequency) => void} onChoose
+ * @returns {{ show: (frequency: import('./storage.js').PayFrequency | null) => void }}
+ */
+function payChoices(group, onChoose) {
+  const chips = PAY_FREQUENCIES.map((frequency) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.setAttribute('role', 'radio');
+    chip.setAttribute('aria-checked', 'false');
+    chip.dataset.often = frequency;
+    chip.textContent = PAY_FREQUENCY_LABELS[frequency];
+    return chip;
   });
+  group.replaceChildren(...chips);
+  const choose = (/** @type {HTMLButtonElement} */ chip) => onChoose(/** @type {import('./storage.js').PayFrequency} */ (chip.dataset.often));
+  group.addEventListener('click', (event) => {
+    const chip = chips.find((c) => c === /** @type {Element} */ (event.target).closest('[role="radio"]'));
+    if (chip) choose(chip);
+  });
+  group.addEventListener('keydown', (event) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    const index = chips.indexOf(/** @type {HTMLButtonElement} */ (document.activeElement));
+    if (!step || index === -1) return;
+    event.preventDefault();
+    const next = chips[(index + step + chips.length) % chips.length];
+    next.focus();
+    choose(next);
+  });
+  return {
+    show(frequency) {
+      for (const chip of chips) chip.setAttribute('aria-checked', String(chip.dataset.often === frequency));
+      const tabbable = chips.find((c) => c.dataset.often === frequency) ?? chips[0];
+      for (const chip of chips) chip.tabIndex = chip === tabbable ? 0 : -1;
+    },
+  };
 }
+
+const resultChoices = payChoices(el('pay-often-chips'), (frequency) => {
+  if (!state || !commit(setPayFrequency(state, frequency))) return;
+  resultChoices.show(frequency);
+  el('pay-often-saved').textContent = 'Saved. You can change it in Settings.';
+  drawPayResult();
+});
 
 /** Take back the paychecks just added. Returns false if their money was already used. */
 function undoAdded() {
@@ -1007,7 +1047,7 @@ function offerAddBack(record) {
 function renderSettings() {
   if (!state) return;
   const frequency = state.settings?.payFrequency ?? 'varies';
-  for (const radio of oftenRadios) radio.checked = radio.value === frequency;
+  settingsChoices.show(frequency);
   const tracking = state.settings?.trackSpending === true;
   el('track-switch').setAttribute('aria-checked', String(tracking));
   el('money-note').hidden = tracking;
@@ -1018,16 +1058,14 @@ function renderSettings() {
 
 // How often do you get paid? (docs/adr/0007): a change saves at once and shows the new number.
 
-const oftenRadios = /** @type {HTMLInputElement[]} */ ([...settingsSheet.querySelectorAll('input[name="often"]')]);
-for (const radio of oftenRadios) {
-  radio.addEventListener('change', () => {
-    if (!state || !radio.checked) return;
-    clearSettingsMessages();
-    if (!commit(setPayFrequency(state, /** @type {import('./storage.js').PayFrequency} */ (radio.value)))) return;
-    const { headline } = homePlan(state, localISODate());
-    el('often-result').textContent = headline.startsWith('Spend') ? `Saved. ${headline}.` : 'Saved.';
-  });
-}
+const settingsChoices = payChoices(el('often-chips'), (frequency) => {
+  if (!state) return;
+  clearSettingsMessages();
+  if (!commit(setPayFrequency(state, frequency))) return;
+  settingsChoices.show(frequency);
+  const { headline } = homePlan(state, localISODate());
+  el('often-result').textContent = headline.startsWith('Spend') ? `Saved. ${headline}.` : 'Saved.';
+});
 
 // Track my spending (docs/adr/0005): off hides purchases; it never deletes them.
 

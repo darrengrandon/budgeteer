@@ -20,7 +20,7 @@ test('answering "How often do you get paid?" updates the number in brackets', as
   const sheet = page.locator('#pay-sheet');
   await sheet.getByLabel('Take-home amount').fill('312.47');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
-  await sheet.getByRole('button', { name: 'Every week' }).click();
+  await sheet.getByRole('radio', { name: 'Every week' }).click();
   await expect(sheet.locator('#pay-sentence'))
     .toHaveText('From your $312.47: $156.24 to spend (about $156 a week), $93.74 saved, $62.49 for goals.');
   await sheet.getByRole('button', { name: 'Done' }).click();

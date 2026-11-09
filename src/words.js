@@ -283,6 +283,15 @@ export function buySentence(cents, name, paidCents = cents) {
 // ---------------------------------------------------------------------------
 // Tap-to-explain (lazy-v2 step 3a): one plain sentence for each number on Home.
 
+/** The answers to "How often do you get paid?", as the chips show them (docs/adr/0007). */
+export const PAY_FREQUENCY_LABELS = Object.freeze({
+  weekly: 'Every week',
+  biweekly: 'Every 2 weeks',
+  'twice-monthly': 'Twice a month',
+  monthly: 'Once a month',
+  varies: "It's different every time",
+});
+
 /** How often, in words, for each stated pay frequency. */
 const PAID_EVERY = Object.freeze({
   weekly: 'every week',

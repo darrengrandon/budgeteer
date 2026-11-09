@@ -23,18 +23,18 @@ async function firstPaycheck(page) {
 
 test('after the first paycheck, the five answers show in order', async ({ page }) => {
   const sheet = await firstPaycheck(page);
-  const group = sheet.getByRole('group', { name: 'How often do you get paid?' });
+  const group = sheet.getByRole('radiogroup', { name: 'How often do you get paid?' });
   await expect(group).toBeVisible();
-  await expect(group.getByRole('button')).toHaveText(LABELS);
-  for (const chip of await group.getByRole('button').all()) await expect(chip).toHaveAttribute('aria-pressed', 'false');
+  await expect(group.getByRole('radio')).toHaveText(LABELS);
+  for (const chip of await group.getByRole('radio').all()) await expect(chip).toHaveAttribute('aria-checked', 'false');
 });
 
 test('tapping "Every week" saves it at once and updates the goal line and Home', async ({ page }) => {
   const sheet = await firstPaycheck(page);
   await expect(sheet.locator('#pay-timeline')).toHaveText('Phone: ready around Feb 13, 2027 (in about 14 weeks)');
-  const weekly = sheet.getByRole('button', { name: 'Every week' });
+  const weekly = sheet.getByRole('radio', { name: 'Every week' });
   await weekly.click();
-  await expect(weekly).toHaveAttribute('aria-pressed', 'true');
+  await expect(weekly).toHaveAttribute('aria-checked', 'true');
   await expect(sheet.getByRole('status')).toHaveText('Saved. You can change it in Settings.');
   expect(await savedFrequency(page)).toBe('weekly');
   await expect(sheet.locator('#pay-timeline')).toHaveText('Phone: ready around Dec 26 (in about 7 weeks)');
@@ -44,10 +44,10 @@ test('tapping "Every week" saves it at once and updates the goal line and Home',
 
 test('a second tap moves the answer: only one is pressed', async ({ page }) => {
   const sheet = await firstPaycheck(page);
-  await sheet.getByRole('button', { name: 'Every week' }).click();
-  await sheet.getByRole('button', { name: 'Once a month' }).click();
-  await expect(sheet.getByRole('button', { name: 'Every week' })).toHaveAttribute('aria-pressed', 'false');
-  await expect(sheet.getByRole('button', { name: 'Once a month' })).toHaveAttribute('aria-pressed', 'true');
+  await sheet.getByRole('radio', { name: 'Every week' }).click();
+  await sheet.getByRole('radio', { name: 'Once a month' }).click();
+  await expect(sheet.getByRole('radio', { name: 'Every week' })).toHaveAttribute('aria-checked', 'false');
+  await expect(sheet.getByRole('radio', { name: 'Once a month' })).toHaveAttribute('aria-checked', 'true');
   expect(await savedFrequency(page)).toBe('monthly');
 });
 
@@ -68,7 +68,7 @@ test('the question does not come back after the first paycheck', async ({ page }
   await sheet.getByLabel('Take-home amount').fill('180');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
   await expect(sheet.getByText(/^From your \$180\.00/)).toBeVisible();
-  await expect(sheet.getByRole('group', { name: 'How often do you get paid?' })).toBeHidden();
+  await expect(sheet.getByRole('radiogroup', { name: 'How often do you get paid?' })).toBeHidden();
 });
 
 test('people who already use the app are not asked', async ({ page }) => {
@@ -79,7 +79,7 @@ test('people who already use the app are not asked', async ({ page }) => {
   await sheet.getByLabel('Take-home amount').fill('150');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
   await expect(sheet.getByText(/^From your \$150\.00/)).toBeVisible();
-  await expect(sheet.getByRole('group', { name: 'How often do you get paid?' })).toBeHidden();
+  await expect(sheet.getByRole('radiogroup', { name: 'How often do you get paid?' })).toBeHidden();
   await sheet.getByRole('button', { name: 'Done' }).click();
   expect(await savedFrequency(page)).toBe('varies');
 });

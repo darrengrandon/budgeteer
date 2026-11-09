@@ -81,7 +81,7 @@ test('the answer from the first paycheck shows in Settings', async ({ page }) =>
   const pay = page.locator('#pay-sheet');
   await pay.getByLabel('Take-home amount').fill('200');
   await pay.getByRole('button', { name: 'Add paycheck' }).click();
-  await pay.getByRole('button', { name: 'Every 2 weeks' }).click();
+  await pay.getByRole('radio', { name: 'Every 2 weeks' }).click();
   await pay.getByRole('button', { name: 'Done' }).click();
   const sheet = await openSettings(page);
   await expect(sheet.getByRole('radio', { name: 'Every 2 weeks' })).toBeChecked();

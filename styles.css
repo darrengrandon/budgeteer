@@ -314,7 +314,8 @@ input[aria-invalid="true"] {
   padding: 0 var(--space-4);
 }
 
-.chip[aria-pressed="true"] {
+.chip[aria-pressed="true"],
+.chip[aria-checked="true"] {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
@@ -808,6 +809,10 @@ dialog.sheet.full {
   margin-bottom: var(--space-1);
 }
 
+.settings-section .chips {
+  margin: var(--space-3) 0 0;
+}
+
 .settings-section > .muted,
 .settings-section > form > .muted,
 .switch-row .muted {
@@ -837,43 +842,6 @@ dialog.sheet.full {
 .preview ul {
   margin: 0;
   padding-left: var(--space-5);
-}
-
-.radio-list {
-  display: grid;
-  gap: 0;
-  margin-top: var(--space-2);
-}
-
-.radio-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: 44px;
-  font-weight: 400;
-}
-
-/* The whole 44px box is the tap target; the circle drawn inside is 22px. */
-.radio-row input {
-  appearance: none;
-  -webkit-appearance: none;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  margin: 0 0 0 calc(-1 * var(--space-3));
-  border: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--input-bg) 0 9px, var(--input-border) 9.5px 11px, transparent 11.5px);
-  cursor: pointer;
-}
-
-.radio-row input:checked {
-  background: radial-gradient(circle, var(--accent) 0 5px, var(--input-bg) 5.5px 8px, var(--accent) 8.5px 11px, transparent 11.5px);
-}
-
-.radio-row input:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: -2px;
 }
 
 .money-list,
