@@ -266,6 +266,12 @@ button {
   gap: var(--space-2);
 }
 
+/* A quiet text action under a button ("Not now", "Restore backup") starts at the left edge. */
+.stack .link {
+  justify-self: start;
+  padding: 0;
+}
+
 /* One focus ring for everything; on a field with an error the same ring turns red. */
 :focus-visible {
   outline: 3px solid var(--focus);
@@ -643,18 +649,30 @@ body:has(dialog[open]) .same-again {
   font-weight: 600;
 }
 
+/* The spending card (only with Track my spending on): what is left, one quiet action, the
+   latest three. */
 .spending h2 {
+  margin-bottom: var(--space-1);
   color: var(--muted);
 }
 
 .left {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   font-size: var(--type-title);
   font-weight: 700;
 }
 
+#log-purchase {
+  padding: 0;
+}
+
 .recent {
   margin-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.recent li:first-child {
+  border-top: 0;
 }
 
 /* "I got paid": fixed at the bottom, in the thumb zone. Messages sit right above it. */
