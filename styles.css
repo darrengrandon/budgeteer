@@ -242,9 +242,14 @@ button {
   gap: var(--space-2);
 }
 
+/* One focus ring for everything; on a field with an error the same ring turns red. */
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+[aria-invalid="true"]:focus-visible {
+  outline-color: var(--error);
 }
 
 .field {
@@ -270,7 +275,7 @@ input[type="text"] {
 }
 
 input[aria-invalid="true"] {
-  border: 2px solid var(--error);
+  border-color: var(--error);
 }
 
 .money-input {
