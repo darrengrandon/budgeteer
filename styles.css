@@ -844,22 +844,33 @@ dialog.sheet[open]:has(> #pay-done:not([hidden])) {
   display: none;
 }
 
-/* Goal sheet */
+/* Sheets (paycheck, goal, buy, purchase): a title, the fields, one full-width button, then
+   quiet text actions. */
 
+dialog.sheet h2 {
+  margin-bottom: var(--space-4);
+}
+
+/* "You already logged $156.00 today." is a reminder, not a warning: a quiet line. */
+.pay-last {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+}
+
+/* Goal sheet: moving and removing are quiet text actions under a hairline, from the left. */
 .goal-more {
   display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
+  justify-items: start;
+  margin-top: var(--space-4);
+  padding-top: var(--space-2);
   border-top: 1px solid var(--border);
 }
 
-.danger {
-  border: 1px solid var(--error);
-  border-radius: var(--radius-m);
-  background: transparent;
+.goal-more .link {
+  padding: 0;
+}
+
+.danger-link {
   color: var(--error);
-  font-weight: 600;
 }
 
 /* Settings: sections separated by space and a hairline; a heading, one quiet line, a control */
