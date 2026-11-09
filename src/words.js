@@ -384,3 +384,28 @@ export function explainActivity(item, parts) {
   if (item.kind === 'goalPurchase') return `This ${money} came out of Goals when you bought ${item.name}.`;
   return `This ${money} purchase came out of Spend.`;
 }
+
+/**
+ * One plain sentence about a goal card's numbers, for the "?" on the card (lazy-v3).
+ * @param {{ name: string, savedCents: number, targetCents: number, first: boolean, line: string,
+ *   perPaydayCents: number, dateISO?: string, todayISO: string }} args line is the card's ready line
+ * @returns {string}
+ */
+export function explainGoal({ name, savedCents, targetCents, first, line, perPaydayCents, dateISO, todayISO }) {
+  const target = moneyShort(targetCents);
+  if (savedCents >= targetCents) return `Your Goals money covers all ${target} for ${name}, so you can buy it now.`;
+  if (line.startsWith("The money's already in Goals")) {
+    return `Goals already holds the ${target} for ${name}, but goals higher up come first, so move it to the top to buy it now.`;
+  }
+  const have = first
+    ? `You have ${moneyShort(savedCents)} of the ${target} for ${name}`
+    : `${name} has ${moneyShort(savedCents)} of its ${target} because goals higher up fill first`;
+  if (line.startsWith('Ready around') && dateISO) {
+    return `${have}, and about ${moneyShort(perPaydayCents)} of each paycheck goes to Goals, `
+      + `so the rest should be there by the payday around ${shortDateFrom(dateISO, todayISO)}.`;
+  }
+  if (line.startsWith('Log a paycheck')) return `${have}, so log a paycheck and Budgeteer will work out when you can buy it.`;
+  if (line.startsWith('Your split puts nothing')) return `${have}, but your split puts nothing into Goals, so change it in Settings to keep saving.`;
+  if (line.startsWith('Should be ready')) return `${have}, and it should be there by now, so log your paycheck to check.`;
+  return `${have}, and it will be ready once more pay comes in.`;
+}

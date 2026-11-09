@@ -6,7 +6,7 @@ import { balances, paycheckParts } from './storage.js';
 import { splitIncome, addDays } from './budget.js';
 import {
   spendHeadline, payBasis, goalAmounts, readyLine, shortDateFrom,
-  explainHeadline, explainBasis, explainGoalAmounts, explainReady, explainLeftToSpend,
+  explainHeadline, explainBasis, explainGoalAmounts, explainReady, explainLeftToSpend, explainGoal,
 } from './words.js';
 
 /** @typedef {import('./storage.js').State} State */
@@ -26,6 +26,7 @@ import {
  * @property {string} amountsExplain what "$40 of $300" means (step 3a)
  * @property {string} lineExplain how the ready date was found; '' when the line has no number
  * @property {string} readyDate the date in "Ready around Dec 19 (...)", shown big on Home; '' otherwise
+ * @property {string} explain one plain sentence about the card's numbers, for its "?"
  */
 
 /** Recent paydays that count toward weekly pay (src/pay.js). */
@@ -118,6 +119,9 @@ export function homePlan(state, todayISO, split = state.split) {
           ? explainReady({ perPaydayCents: perPayday, neededCents, dateISO, todayISO, first: index === 0 })
           : '',
         readyDate: line.startsWith('Ready around') && dateISO ? shortDateFrom(dateISO, todayISO) : '',
+        explain: explainGoal({
+          name: goal.name, savedCents, targetCents: goal.targetCents, first: index === 0, line, perPaydayCents: perPayday, dateISO, todayISO,
+        }),
       };
     }),
   };

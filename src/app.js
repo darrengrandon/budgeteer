@@ -1205,7 +1205,9 @@ function explainBoxFor(target) {
   box.id = id;
   box.className = 'explain';
   box.dataset.made = 'true';
-  target.after(box);
+  // A card's "?" opens its sentence under the date line; a number opens it right under itself.
+  const anchor = target.dataset.help !== undefined ? target.closest('.goal-card')?.querySelector('.goal-ready') : null;
+  (anchor ?? target).after(box);
   return box;
 }
 
@@ -1231,7 +1233,7 @@ function setExplain(target, boxId, sentence) {
 
 /** Close every open explanation on Home. */
 function closeExplains() {
-  for (const target of el('home').querySelectorAll('[data-explain][aria-expanded="true"]')) {
+  for (const target of el('home').querySelectorAll('[data-explain][aria-expanded="true"], [data-help][aria-expanded="true"]')) {
     target.setAttribute('aria-expanded', 'false');
   }
   for (const box of /** @type {NodeListOf<HTMLElement>} */ (el('home').querySelectorAll('.explain'))) {
@@ -1246,13 +1248,13 @@ function toggleExplain(target) {
   closeExplains();
   if (wasOpen) return;
   const box = explainBoxFor(target);
-  box.textContent = target.dataset.explain ?? '';
+  box.textContent = target.dataset.explain ?? target.dataset.help ?? '';
   box.hidden = false;
   target.setAttribute('aria-expanded', 'true');
 }
 
 el('home').addEventListener('click', (event) => {
-  const target = /** @type {HTMLElement | null} */ (/** @type {Element} */ (event.target).closest('[data-explain]'));
+  const target = /** @type {HTMLElement | null} */ (/** @type {Element} */ (event.target).closest('[data-explain], [data-help]'));
   if (target) toggleExplain(target);
 });
 el('home').addEventListener('keydown', (event) => {
@@ -1346,7 +1348,16 @@ function goalCard(goal, top, justFunded = false) {
   options.dataset.action = 'options';
   options.dataset.id = goal.id;
   options.setAttribute('aria-label', `Options for ${goal.name}`);
-  head.append(name, options);
+  // One "?" per card explains its numbers in one sentence (lazy-v3); the sentence opens under the date.
+  const help = document.createElement('button');
+  help.type = 'button';
+  help.className = 'goal-help';
+  help.textContent = '?';
+  help.setAttribute('aria-label', `What do the numbers for ${goal.name} mean?`);
+  help.setAttribute('aria-expanded', 'false');
+  help.setAttribute('aria-controls', `explain-${goal.id}-card`);
+  help.dataset.help = goal.explain;
+  head.append(name, help, options);
 
   const amounts = document.createElement('p');
   amounts.className = 'goal-amounts';
@@ -1363,8 +1374,8 @@ function goalCard(goal, top, justFunded = false) {
   writeReadyLine(ready, goal);
   setExplain(ready, `explain-${goal.id}-ready`, goal.lineExplain);
 
-  // The date first: it answers "when can I buy it?" (docs/DESIGN.md).
-  li.append(head, ready, amounts, bar);
+  // Every card in the same order: amount, bar, then the date (docs/DESIGN.md).
+  li.append(head, amounts, bar, ready);
   if (goal.funded) {
     const buy = document.createElement('button');
     buy.type = 'button';

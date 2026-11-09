@@ -418,12 +418,17 @@ input[aria-invalid="true"] {
 .goal-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--space-1);
+}
+
+.goal-head .goal-name {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .goal-head .icon-button {
   margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0;
+  width: 44px;
   color: var(--muted);
   flex: none;
 }
@@ -434,7 +439,7 @@ input[aria-invalid="true"] {
 }
 
 .goal-ready {
-  margin: var(--space-1) 0 var(--space-1);
+  margin: var(--space-2) 0 0;
 }
 
 .goal-card:not(.top) .ready-date {
@@ -447,13 +452,13 @@ input[aria-invalid="true"] {
 }
 
 .goal-amounts {
-  margin: 0 0 var(--space-1);
+  margin: var(--space-1) 0 var(--space-2);
   font-size: var(--type-small);
 }
 
 /* The top goal: "Ready around" quiet, the date in the display size, the weeks quiet again. */
 .goal-card.top .goal-ready {
-  margin: var(--space-2) 0 var(--space-2);
+  margin: var(--space-3) 0 0;
   font-size: var(--type-heading);
   font-weight: 600;
   line-height: 1.3;
@@ -954,26 +959,33 @@ dialog.sheet.full {
   transform: translateX(20px);
 }
 
-/* Tap-to-explain (lazy-v2 step 3a): a number with a dotted line under it shows one sentence.
-   Each one is at least a 44px tap target. */
+/* Tap-to-explain (lazy-v2 step 3a): a tapped number still opens one sentence under it, but
+   numbers carry no marks; the visible way in is each goal card's "?" (lazy-v3). Each number
+   is still at least a 44px tap target. */
 [data-explain] {
   cursor: pointer;
-  text-decoration: underline dotted;
-  text-decoration-color: var(--input-border);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.25em;
 }
 
-/* On the top goal only the date carries the dotted line; the whole line is still the target. */
-.goal-card.top .goal-ready[data-explain] {
-  text-decoration: none;
+/* The "?" on a goal card: a 44px target with a small circled "?" drawn inside. */
+.goal-help {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: calc(-1 * var(--space-2)) 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 0 10px, var(--input-border) 10.5px 11.5px, transparent 12px);
+  color: var(--muted);
+  font-size: var(--type-small);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.goal-card.top .goal-ready[data-explain] .ready-date {
-  text-decoration: underline dotted;
-  text-decoration-color: var(--input-border);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.12em;
+.goal-help[aria-expanded="true"] {
+  background: radial-gradient(circle, var(--accent) 0 11.5px, transparent 12px);
+  color: var(--accent-text);
 }
 
 p[data-explain] {
