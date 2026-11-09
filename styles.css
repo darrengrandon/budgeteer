@@ -998,7 +998,8 @@ dialog.sheet[open]:has(> #pay-done:not([hidden])) {
   cursor: pointer;
 }
 
-/* The "?" on a goal card: a 44px target with a small circled "?" drawn inside. */
+/* The "?" on a goal card: a 44px target with a small, light circled "?" drawn inside. It is
+   quieter than the "⋯" menu: a hairline ring and a regular-weight mark. */
 .goal-help {
   flex: none;
   width: 44px;
@@ -1007,10 +1008,10 @@ dialog.sheet[open]:has(> #pay-done:not([hidden])) {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: radial-gradient(circle, transparent 0 10px, var(--input-border) 10.5px 11.5px, transparent 12px);
+  background: radial-gradient(circle, transparent 0 9.5px, var(--border) 10px 11px, transparent 11.5px);
   color: var(--muted);
-  font-size: var(--type-small);
-  font-weight: 700;
+  font-size: 0.8125rem;
+  font-weight: 400;
   line-height: 1;
   cursor: pointer;
 }
@@ -1025,6 +1026,15 @@ p[data-explain] {
   flex-direction: column;
   justify-content: center;
   min-height: 44px;
+}
+
+/* The amount keeps its 44px tap target, but the padding is given back with negative margins, so
+   the bar sits about 8px under the amount on every card. */
+p.goal-amounts[data-explain] {
+  display: block;
+  min-height: 0;
+  padding-block: 12px;
+  margin: calc(var(--space-1) - 12px) 0 calc(var(--space-2) - 12px);
 }
 
 /* A smaller goal's ready line flows as one sentence. */
