@@ -1,8 +1,17 @@
+# Installed packages and caches (heavy, rebuilt by npm and Playwright)
 node_modules/
 .npm-cache/
 .playwright-browsers/
+.playwright-tmp/
+
+# Test output and reviews (heavy, and screenshots of test data)
 test-results/
 playwright-report/
-.scratch/
-.playwright-tmp/
 overnight-review/
+
+# Scratch files
+.scratch/
+
+# Operating system files
+.DS_Store
+Thumbs.db
