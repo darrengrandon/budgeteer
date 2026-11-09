@@ -243,7 +243,11 @@
       <ul id="history" class="history"></ul>
       <button type="button" id="history-toggle" class="secondary wide" hidden></button>
       <p id="history-error" class="error" role="alert"></p>
-      <p id="history-result" class="result" role="status"></p>
+      <!-- "Paycheck removed." with Undo for 5 seconds (lazy-v3). -->
+      <div class="status-row">
+        <p id="history-result" class="result" role="status"></p>
+        <button type="button" id="history-undo" class="link" aria-label="Undo the removal" hidden>Undo</button>
+      </div>
       <button type="button" id="history-action" class="secondary wide" hidden></button>
     </section>
 

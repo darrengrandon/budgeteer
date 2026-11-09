@@ -382,6 +382,24 @@ export function removeGoalPurchase(state, id) {
 }
 
 /**
+ * History's Undo (lazy-v3): put a removed paycheck or purchase back where it was, so the state is
+ * exactly as before the removal. Refused if a record with that id is already there.
+ * @param {State} state
+ * @param {'paycheck' | 'purchase'} kind
+ * @param {Paycheck | Purchase} record
+ * @param {number} index where it was in its list
+ * @returns {State}
+ */
+export function putBack(state, kind, record, index) {
+  const key = kind === 'paycheck' ? 'paychecks' : 'purchases';
+  /** @type {(Paycheck | Purchase)[]} */
+  const list = state[key];
+  if (list.some((r) => r.id === record.id)) throw new RangeError('That is already there.');
+  const at = Math.min(Math.max(index, 0), list.length);
+  return { ...state, [key]: [...list.slice(0, at), record, ...list.slice(at)] };
+}
+
+/**
  * A fresh version 1 state with no records (kept for version 1 callers and tests).
  * @param {Split} [split]
  * @returns {State}

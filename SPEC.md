@@ -120,7 +120,9 @@ returns the goal to the top, priced at what came out of Goals.
 - Your money: what is in Spend, Save and Goals. With tracking off, Spend is everything
   that went into it (purchases aren't taken out).
 - Track my spending (switch).
-- History: every paycheck, purchase and goal buy, newest first, each removable.
+- History: every paycheck, purchase and goal buy, newest first, each removable. Removing a
+  paycheck or purchase shows "Paycheck removed." with "Undo" for 5 seconds; Undo puts it back
+  exactly where it was.
 - Backup: download and restore a JSON file.
 - Add to Home Screen help.
 

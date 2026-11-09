@@ -19,6 +19,7 @@ import {
   addPurchase,
   setTrackSpending,
   setPayFrequency,
+  putBack,
   PAY_FREQUENCIES,
   removePaycheck,
   removePurchase,
@@ -813,6 +814,7 @@ const splitValues = () => ({ spend: splitInputs.spend.value, save: splitInputs.s
 
 /** Clear every message inside Settings, so only the newest one shows. */
 function clearSettingsMessages() {
+  clearHistoryUndo();
   for (const node of settingsSheet.querySelectorAll('.result')) node.textContent = '';
   clearErrors(settingsSheet);
   el('split-hint').hidden = false;
@@ -999,18 +1001,67 @@ el('history').addEventListener('click', (event) => {
     throw error;
   }
   const label = button.getAttribute('aria-label');
-  const question = kind === 'goalPurchase' ? `${label}? The money goes back into Goals.` : `${label}? You can't undo this.`;
+  const question = kind === 'goalPurchase' ? `${label}? The money goes back into Goals.` : `${label}?`;
   if (!window.confirm(question)) return;
   const record = (state.goalPurchases ?? []).find((x) => x.id === id);
+  // What was removed, and where, so Undo can put it back exactly (lazy-v3).
+  const list = kind === 'paycheck' ? state.paychecks : state.purchases;
+  const index = list.findIndex((r) => r.id === id);
+  const removed = list[index];
   if (!commit(next)) return;
-  if (kind === 'paycheck') el('history-result').textContent = 'Paycheck removed.';
-  else if (kind === 'purchase') el('history-result').textContent = 'Purchase removed. The money is back in Spend.';
-  else {
+  if (kind === 'paycheck' || kind === 'purchase') {
+    offerHistoryUndo(kind === 'paycheck' ? 'Paycheck removed.' : 'Purchase removed. The money is back in Spend.', () => {
+      if (!state) return;
+      try {
+        if (commit(putBack(state, kind, removed, index))) {
+          el('history-result').textContent = kind === 'paycheck' ? 'Paycheck is back.' : 'Purchase is back.';
+        }
+      } catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        el('history-error').textContent = "That can't be put back now.";
+      }
+    });
+  } else {
     el('history-result').textContent =
       `Undone. ${formatCents(record?.cents ?? 0)} is back in Goals. Add the goal again if you still want it.`;
     if (record) offerAddBack(record);
   }
   el('history-title').focus();
+});
+
+/** History's Undo lasts this long (lazy-v3), like the one-tap paycheck's. */
+const HISTORY_UNDO_MS = 5_000;
+let historyUndoTimer = 0;
+/** @type {(() => void) | null} */
+let historyUndoRun = null;
+
+/**
+ * "Paycheck removed." with Undo beside it, both gone after 5 seconds.
+ * @param {string} message
+ * @param {() => void} run puts it back
+ */
+function offerHistoryUndo(message, run) {
+  clearHistoryUndo();
+  el('history-result').textContent = message;
+  el('history-undo').hidden = false;
+  historyUndoRun = run;
+  historyUndoTimer = window.setTimeout(() => {
+    el('history-result').textContent = '';
+    clearHistoryUndo();
+  }, HISTORY_UNDO_MS);
+}
+
+function clearHistoryUndo() {
+  clearTimeout(historyUndoTimer);
+  historyUndoRun = null;
+  el('history-undo').hidden = true;
+}
+
+el('history-undo').addEventListener('click', (event) => {
+  if (isSecondTap(event)) return;
+  const run = historyUndoRun;
+  clearHistoryUndo();
+  run?.();
 });
 
 /**
