@@ -2,6 +2,7 @@
 // Run after the overnight suite: node overnight/make-index.mjs
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { RUNS as runs, runOf, withoutRun } from './runs.mjs';
 
 const review = fileURLToPath(new URL('../overnight-review/', import.meta.url));
 
@@ -18,12 +19,6 @@ const scenarios = {
   P: 'Phase 3 fix P2/P2b, checked by hand at 320px',
 };
 const devices = { iphone15: 'iPhone 15 (393px)', pixel9: 'Pixel 9 (360px)', iphoneSE: 'iPhone SE (320px)' };
-const runs = {
-  before: 'before the fix',
-  after: 'after the fix',
-  final: 'final run, all fixes in',
-  '': 'first run',
-};
 const extra = {
   'P2-fix-iphoneSE-light-after.png': 'After fixes P2/P2b, light: "Paycheck added. Undo" on one line, Buy it clear of the bar',
   'P2-fix-iphoneSE-dark-after.png': 'After fixes P2/P2b, dark: the same screen',
@@ -40,10 +35,10 @@ if (existsSync(`${review}media.jsonl`)) {
 
 /** @param {string} file */
 function parse(file) {
-  const run = /-(before|after|final)\.(webm|png)$/.exec(file)?.[1] ?? '';
+  const run = runOf(file);
   const scenario = file[0];
   const device = Object.keys(devices).find((d) => file.includes(`-${d}`)) ?? '';
-  const base = file.replace(/-(before|after|final)(\.(webm|png))$/, '$2');
+  const base = withoutRun(file);
   const text = extra[file] ?? described.get(file) ?? described.get(base) ?? (file.endsWith('.webm') ? scenarios[scenario] : file);
   return { scenario, device, run, text };
 }
@@ -66,7 +61,7 @@ let html = `<!doctype html>
   td, th { border-bottom: 1px solid #d5d8e3; padding: 6px 8px; text-align: left; vertical-align: top; }
   img { width: 90px; border: 1px solid #d5d8e3; border-radius: 6px; }
   .tag { display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 12px; background: #e3e5ee; }
-  .before { background: #fdecea; } .after { background: #e6f4ea; } .final { background: #dfe7ff; }
+  .before { background: #fdecea; } .after { background: #e6f4ea; } .final { background: #dfe7ff; } .lazyv2 { background: #fff3cd; }
   a { color: #3d4bd6; }
 </style>
 </head>
@@ -76,7 +71,8 @@ let html = `<!doctype html>
 <a href="OVERNIGHT-REPORT.md">OVERNIGHT-REPORT.md</a>; the separate agent's notes are in
 <a href="agent-notes.md">agent-notes.md</a>. Tags: <span class="tag">first run</span>
 <span class="tag before">before the fix</span> <span class="tag after">after the fix</span>
-<span class="tag final">final run, all fixes in</span>.</p>
+<span class="tag final">final run, all fixes in</span>
+<span class="tag lazyv2">lazy-v2 run</span>.</p>
 `;
 
 for (const [key, title] of Object.entries(scenarios)) {
