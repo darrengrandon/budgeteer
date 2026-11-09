@@ -1291,9 +1291,10 @@ backupFile.addEventListener('change', async () => {
  * @param {boolean} top
  * @returns {HTMLLIElement}
  */
-function goalCard(goal, top) {
+function goalCard(goal, top, justFunded = false) {
   const li = document.createElement('li');
-  li.className = ['goal-card', top ? 'top' : '', goal.funded ? 'funded' : ''].filter(Boolean).join(' ');
+  li.className = ['goal-card', top ? 'top' : '', goal.funded ? 'funded' : '', justFunded ? 'just-funded' : '']
+    .filter(Boolean).join(' ');
 
   const head = document.createElement('div');
   head.className = 'goal-head';
@@ -1338,6 +1339,17 @@ function goalCard(goal, top) {
   return li;
 }
 
+/** Goals that were funded at the last draw (null before the first draw). */
+let fundedBefore = /** @type {Set<string> | null} */ (null);
+/** Goals waiting for their funded moment until Home is in view. */
+const fundedMoment = /** @type {Set<string>} */ (new Set());
+// A sheet closing brings Home into view: play a waiting moment then.
+for (const sheet of document.querySelectorAll('dialog')) {
+  sheet.addEventListener('close', () => {
+    if (fundedMoment.size > 0) render();
+  });
+}
+
 function render() {
   const firstRun = state === null;
   el('welcome').hidden = !firstRun;
@@ -1356,7 +1368,15 @@ function render() {
   const again = sameAgainCents(state, localISODate());
   el('same-again').hidden = again === null;
   el('same-again').textContent = again === null ? '' : `Same as last time: add ${formatCents(again)}`;
-  el('goal-cards').replaceChildren(...plan.goals.map((goal, i) => goalCard(goal, i === 0)));
+  // The funded moment (docs/DESIGN.md "Motion"): a goal that became fully saved since the last
+  // draw gets it once, when Home is in view, never behind an open sheet and never on load.
+  const fundedNow = new Set(plan.goals.filter((g) => g.funded).map((g) => g.id));
+  if (fundedBefore) for (const id of fundedNow) if (!fundedBefore.has(id)) fundedMoment.add(id);
+  for (const id of fundedMoment) if (!fundedNow.has(id)) fundedMoment.delete(id);
+  fundedBefore = fundedNow;
+  const homeInView = document.querySelector('dialog[open]') === null;
+  el('goal-cards').replaceChildren(...plan.goals.map((goal, i) => goalCard(goal, i === 0, homeInView && fundedMoment.has(goal.id))));
+  if (homeInView) fundedMoment.clear();
   el('goals-empty').hidden = plan.goals.length > 0;
   renderSpending();
   el('install-card').hidden = !installHelpWanted();

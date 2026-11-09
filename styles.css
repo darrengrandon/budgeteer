@@ -953,3 +953,28 @@ body:has(dialog[open]) .same-again {
   background: var(--input-bg);
   font-size: 0.95rem;
 }
+
+/* The one moment of motion (docs/DESIGN.md): a goal that just became fully saved. Its line
+   rises in and the card's green tint fades. Nothing moves with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .goal-card.just-funded {
+    animation: funded-tint 1200ms ease-out;
+  }
+
+  .goal-card.just-funded .goal-ready {
+    animation: funded-in 600ms ease-out;
+  }
+}
+
+@keyframes funded-tint {
+  from {
+    background-color: var(--ok-bg);
+  }
+}
+
+@keyframes funded-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
