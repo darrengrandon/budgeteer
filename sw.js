@@ -2,7 +2,19 @@
 // same-origin GET try the network first and fall back to the cache when offline.
 // It never handles or fetches anything from another origin.
 
-const CACHE = 'budgeteer-v1';
+// Every path here is relative, so the app works from a subfolder (<name>.github.io/budgeteer/)
+// as well as from the root. All project sites of one github.io account share one address, and so
+// one cache storage: the cache is named for this copy's folder, and only this copy's old caches
+// are ever deleted (never another site's).
+const FOLDER = new URL('./', self.location).pathname; // "/budgeteer/" or "/"
+const CACHE = `budgeteer-v2 ${FOLDER}`;
+
+/**
+ * True for a cache this copy made before: the old unnamed "budgeteer-v1", or an older version
+ * named for this same folder.
+ * @param {string} key
+ */
+const isOldOwnCache = (key) => key !== CACHE && (key === 'budgeteer-v1' || (key.startsWith('budgeteer-') && key.endsWith(` ${FOLDER}`)));
 const FILES = [
   './',
   'index.html',
@@ -28,7 +40,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys()
-    .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+    .then((keys) => Promise.all(keys.filter(isOldOwnCache).map((key) => caches.delete(key))))
     .then(() => self.clients.claim()));
 });
 
