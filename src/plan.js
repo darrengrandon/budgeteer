@@ -5,7 +5,7 @@ import { projectGoals } from './goals.js';
 import { balances, paycheckParts } from './storage.js';
 import { splitIncome, addDays } from './budget.js';
 import {
-  spendHeadline, payBasis, goalAmounts, readyLine,
+  spendHeadline, payBasis, goalAmounts, readyLine, shortDateFrom,
   explainHeadline, explainBasis, explainGoalAmounts, explainReady, explainLeftToSpend,
 } from './words.js';
 
@@ -25,6 +25,7 @@ import {
  * @property {boolean} canMoveToBuy not first, but Goals already holds its price (REVIEW.md L6)
  * @property {string} amountsExplain what "$40 of $300" means (step 3a)
  * @property {string} lineExplain how the ready date was found; '' when the line has no number
+ * @property {string} readyDate the date in "Ready around Dec 19 (...)", shown big on Home; '' otherwise
  */
 
 /** Recent paydays that count toward weekly pay (src/pay.js). */
@@ -116,6 +117,7 @@ export function homePlan(state, todayISO, split = state.split) {
         lineExplain: line.startsWith('Ready around') && dateISO
           ? explainReady({ perPaydayCents: perPayday, neededCents, dateISO, todayISO, first: index === 0 })
           : '',
+        readyDate: line.startsWith('Ready around') && dateISO ? shortDateFrom(dateISO, todayISO) : '',
       };
     }),
   };

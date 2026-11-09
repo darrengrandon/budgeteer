@@ -191,7 +191,7 @@ test('dark theme follows the phone setting', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await open(page);
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  expect(bg).toBe('rgb(18, 19, 26)');
+  expect(bg).toBe('rgb(14, 20, 22)');
 });
 
 test('the app makes no requests outside its own files', async ({ page }) => {

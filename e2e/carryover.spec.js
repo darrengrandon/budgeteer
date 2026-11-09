@@ -94,12 +94,12 @@ test('a backup with very high ids keeps working after more paychecks', async ({ 
   await expect(page.locator('#headline')).toHaveText('Spend about $35 a week');
 });
 
-test('Home is in the promised order: headline, goals, then "I got paid" at the bottom', async ({ page }) => {
+test('Home is in the promised order: goals, then the spend line, then "I got paid" at the bottom', async ({ page }) => {
   await open(page);
   await seed(page, v2({ paychecks: [P('p1', '2026-11-07', 20000)], goals: [{ id: 'g1', name: 'Phone', targetCents: 30000 }] }));
   const y = async (/** @type {string} */ selector) => (await page.locator(selector).first().boundingBox())?.y ?? -1;
-  expect(await y('#headline')).toBeLessThan(await y('.goal-card'));
-  expect(await y('.goal-card')).toBeLessThan(await y('#got-paid'));
+  expect(await y('.goal-card')).toBeLessThan(await y('#headline'));
+  expect(await y('#headline')).toBeLessThan(await y('#got-paid'));
 });
 
 test('a direct visit to the app address works without the file name', async ({ page }) => {

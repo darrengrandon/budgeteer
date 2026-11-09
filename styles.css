@@ -1,53 +1,69 @@
-/* Budgeteer phone app. Designed for 360-430px wide; wider screens get the same column, centered.
+/* Budgeteer phone app. Tokens, scales and rules: docs/DESIGN.md.
+   Designed for 320-430px wide; wider screens get the same column, centered.
    Touch targets are at least 44px. Nothing depends on hover. Light and dark from the phone. */
 
 :root {
   color-scheme: light dark;
-  --bg: #f5f6fa;
+  --bg: #f2f5f6;
   --card: #ffffff;
-  --text: #1d2030;
-  --muted: #555b70;
-  --border: #d5d8e3;
+  --text: #141c1f;
+  --muted: #55636a;
+  --border: #dce3e6;
   --input-bg: #ffffff;
-  --input-border: #7c8196;
-  --accent: #3d4bd6;
+  --input-border: #76858c;
+  --accent: #0f5f73;
   --accent-text: #ffffff;
-  --focus: #1f6feb;
+  --focus: #0f5f73;
   --error: #b3261e;
-  --error-bg: #fdecea;
-  --ok: #1b6e3a;
-  --ok-bg: #e6f4ea;
-  --notice-bg: #fff4d6;
-  --notice-text: #5c4100;
-  --spend: #0f7b6c;
-  --save: #2459c7;
-  --goals: #7a2ff0;
-  --track: #e3e5ee;
-  --radius: 18px;
+  --error-bg: #fcebe9;
+  --ok: #1e6b3a;
+  --ok-bg: #e4f2e8;
+  --notice-bg: #fdf1d3;
+  --notice-text: #5a4000;
+  --goals: #0f5f73;
+  --track: #dce3e6;
+
+  /* Type (docs/DESIGN.md "Type") */
+  --type-display: 2.5rem;
+  --type-title: 1.5rem;
+  --type-heading: 1.125rem;
+  --type-body: 1.0625rem;
+  --type-small: 0.9375rem;
+
+  /* Space and shape */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --radius-s: 10px;
+  --radius-m: 14px;
+  --radius-l: 20px;
+  --radius-full: 999px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #12131a;
-    --card: #1d1f2a;
-    --text: #eceef6;
-    --muted: #a9aec2;
-    --border: #3a3e52;
-    --input-bg: #262938;
-    --input-border: #7d829a;
-    --accent: #8b95ff;
-    --accent-text: #10122a;
-    --focus: #9cc2ff;
+    --bg: #0e1416;
+    --card: #162024;
+    --text: #e4ecef;
+    --muted: #9aaab1;
+    --border: #26333a;
+    --input-bg: #1b272c;
+    --input-border: #6f818a;
+    --accent: #7cc6d6;
+    --accent-text: #072530;
+    --focus: #7cc6d6;
     --error: #ffb4ab;
-    --error-bg: #3b1a17;
-    --ok: #8fd9a8;
-    --ok-bg: #16301f;
-    --notice-bg: #3a2f10;
-    --notice-text: #ffe08a;
-    --spend: #4fd1bd;
-    --save: #8ab4ff;
-    --goals: #c8a6ff;
-    --track: #33374a;
+    --error-bg: #3a1b18;
+    --ok: #8fd3a6;
+    --ok-bg: #15301f;
+    --notice-bg: #33290e;
+    --notice-text: #f5d98a;
+    --goals: #7cc6d6;
+    --track: #2a383e;
   }
 }
 
@@ -67,8 +83,9 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
-  font-size: 1.0625rem;
+  font-size: var(--type-body);
   line-height: 1.45;
+  font-variant-numeric: tabular-nums; /* money lines up everywhere */
   overflow-wrap: anywhere;
   -webkit-tap-highlight-color: transparent;
 }
@@ -86,15 +103,19 @@ body {
   white-space: nowrap;
 }
 
-/* The phone column. Bottom padding leaves room for the "I got paid" bar. */
+/* The phone column. Bottom padding leaves room for the "I got paid" bar (and its message). */
 .app {
   max-width: 430px;
   margin: 0 auto;
   padding:
-    calc(env(safe-area-inset-top) + 6px)
-    calc(env(safe-area-inset-right) + 16px)
-    calc(env(safe-area-inset-bottom) + 120px)
-    calc(env(safe-area-inset-left) + 16px);
+    calc(env(safe-area-inset-top) + var(--space-1))
+    calc(env(safe-area-inset-right) + var(--space-4))
+    calc(env(safe-area-inset-bottom) + 112px)
+    calc(env(safe-area-inset-left) + var(--space-4));
+}
+
+body:has(#home-status:not(:empty)) .app {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 172px);
 }
 
 .app-bar {
@@ -106,23 +127,26 @@ body {
 
 h1 {
   margin: 0;
-  font-size: 1.2rem;
-  letter-spacing: -0.01em;
+  font-size: var(--type-body);
+  font-weight: 700;
+  color: var(--muted);
 }
 
 h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.35rem;
-  line-height: 1.25;
+  margin: 0 0 var(--space-2);
+  font-size: var(--type-title);
+  line-height: 1.2;
 }
 
 h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--type-heading);
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 p {
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--space-3);
 }
 
 .muted {
@@ -130,7 +154,7 @@ p {
 }
 
 small {
-  font-size: 0.9rem;
+  font-size: var(--type-small);
 }
 
 /* Buttons and inputs */
@@ -150,25 +174,40 @@ button {
 
 .primary {
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-m);
   background: var(--accent);
   color: var(--accent-text);
   font-weight: 700;
-  padding: 0 1.25rem;
+  padding: 0 var(--space-5);
 }
 
 .secondary {
   border: 1px solid var(--input-border);
-  border-radius: 14px;
-  background: var(--card);
+  border-radius: var(--radius-m);
+  background: transparent;
   font-weight: 600;
-  padding: 0 1rem;
+  padding: 0 var(--space-4);
+}
+
+/* A text button for small, optional actions ("+ Add a goal"). */
+.quiet {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  padding: 0;
+  text-align: left;
 }
 
 .big {
   width: 100%;
   min-height: 60px;
-  font-size: 1.2rem;
+  font-size: 1.1875rem;
+}
+
+.wide {
+  width: 100%;
+  min-height: 52px;
 }
 
 .link {
@@ -178,7 +217,7 @@ button {
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
-  padding: 0 0.75rem;
+  padding: 0 var(--space-3);
 }
 
 .icon-button {
@@ -194,8 +233,13 @@ button {
 .row-center {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-2);
 }
 
 :focus-visible {
@@ -206,23 +250,23 @@ button {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  margin-bottom: 1rem;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
 }
 
 label {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 input[type="text"] {
   width: 100%;
   min-width: 0;
   min-height: 52px;
-  padding: 0 0.85rem;
+  padding: 0 var(--space-3);
   border: 1px solid var(--input-border);
-  border-radius: 12px;
+  border-radius: var(--radius-s);
   background: var(--input-bg);
-  font-size: 1.125rem; /* 16px or more, so iPhone doesn't zoom in */
+  font-size: 1.125rem; /* 18px, so iPhone doesn't zoom in */
 }
 
 input[aria-invalid="true"] {
@@ -232,7 +276,7 @@ input[aria-invalid="true"] {
 .money-input {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .money-input > span {
@@ -249,14 +293,13 @@ input[aria-invalid="true"] {
   min-height: 64px;
   font-size: 2rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: -0.25rem 0 1rem;
+  gap: var(--space-2);
+  margin: calc(-1 * var(--space-1)) 0 var(--space-4);
 }
 
 .chips:not(:has(:not([hidden]))) {
@@ -265,13 +308,19 @@ input[aria-invalid="true"] {
 
 .chip {
   border: 1px solid var(--input-border);
-  border-radius: 999px;
-  background: var(--input-bg);
+  border-radius: var(--radius-full);
+  background: transparent;
   font-weight: 600;
-  padding: 0 1rem;
+  padding: 0 var(--space-4);
 }
 
-/* Messages */
+.chip[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+/* Messages: color only for states */
 
 .error:empty,
 .result:empty {
@@ -279,38 +328,52 @@ input[aria-invalid="true"] {
 }
 
 .error {
-  margin: 0.25rem 0 0;
-  padding: 0.5rem 0.75rem;
-  border-radius: 10px;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-s);
   background: var(--error-bg);
   color: var(--error);
   font-weight: 600;
 }
 
 .result {
-  margin: 0.75rem 0 0;
-  padding: 0.6rem 0.75rem;
-  border-radius: 10px;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-s);
   background: var(--ok-bg);
   color: var(--ok);
   font-weight: 600;
 }
 
 .notice {
-  margin: 0.5rem 0;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
+  margin: var(--space-2) 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-s);
   background: var(--notice-bg);
   color: var(--notice-text);
   font-weight: 600;
 }
 
+.notice > p {
+  margin: 0;
+}
+
+.notice > button {
+  margin-top: var(--space-3);
+}
+
+.small-notice {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--type-small);
+}
+
 .nudge {
   width: 100%;
   min-height: 48px;
-  margin: 0.5rem 0 0;
+  margin: var(--space-2) 0 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--notice-bg);
   color: var(--notice-text);
   font-weight: 700;
@@ -319,101 +382,140 @@ input[aria-invalid="true"] {
 /* First run */
 
 .welcome {
-  padding-top: 1.5rem;
+  padding-top: var(--space-5);
 }
 
 .welcome h2 {
   font-size: 1.75rem;
 }
 
-/* Home */
-
-.headline-card {
-  padding: 1.25rem 0.25rem 0.5rem;
-}
-
-.headline {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
-.basis {
-  margin: 0.4rem 0 0;
-}
+/* Home: the goals first */
 
 .goal-cards {
   list-style: none;
-  margin: 1rem 0 0;
+  margin: var(--space-2) 0 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
+/* Other goals are objects: a card with a name, a date, an amount and a quiet bar. */
 .goal-card {
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: var(--space-4);
+  border-radius: var(--radius-l);
   background: var(--card);
 }
 
+/* The top goal is the answer, not a box: big type straight on the page. The side padding only
+   gives the funded tint room to breathe. */
 .goal-card.top {
-  padding: 1.25rem;
-}
-
-.goal-card.top .goal-name {
-  font-size: 1.5rem;
+  margin: 0 calc(-1 * var(--space-3)) var(--space-4);
+  padding: var(--space-3) var(--space-3) var(--space-4);
+  background: transparent;
 }
 
 .goal-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-2);
+}
+
+.goal-head .icon-button {
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0;
+  color: var(--muted);
+  flex: none;
+}
+
+.goal-name {
+  font-size: var(--type-heading);
+  font-weight: 600;
+}
+
+.goal-ready {
+  margin: var(--space-1) 0 var(--space-1);
+}
+
+.goal-card:not(.top) .ready-date {
+  font-weight: 600;
+}
+
+.goal-card:not(.top) .ready-weeks,
+.goal-amounts {
+  color: var(--muted);
 }
 
 .goal-amounts {
-  margin: 0.15rem 0 0.6rem;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  margin: 0 0 var(--space-1);
+  font-size: var(--type-small);
 }
 
-.goal-card.top .goal-amounts {
-  font-size: 1.15rem;
+/* The top goal: "Ready around" quiet, the date in the display size, the weeks quiet again. */
+.goal-card.top .goal-ready {
+  margin: var(--space-2) 0 var(--space-2);
+  font-size: var(--type-heading);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.goal-card.top .ready-lead,
+.goal-card.top .ready-weeks {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.goal-card.top .ready-lead {
+  font-size: var(--type-body);
+}
+
+.goal-card.top .ready-weeks {
+  font-size: var(--type-small);
+}
+
+.goal-card.top .ready-date {
+  font-size: var(--type-display);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.goal-card.top.funded .goal-ready {
+  font-size: var(--type-display);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.goal-card.funded .goal-ready {
+  color: var(--ok);
 }
 
 progress {
   display: block;
   width: 100%;
-  height: 0.6rem;
+  height: 6px;
   -webkit-appearance: none;
   appearance: none;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--track);
   color: var(--goals);
   overflow: hidden;
 }
 
-.goal-card.top progress {
-  height: 0.9rem;
-}
-
 progress::-webkit-progress-bar {
   background: var(--track);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 progress::-webkit-progress-value {
   background: var(--goals);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 progress::-moz-progress-bar {
   background: var(--goals);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .goal-card.funded progress::-webkit-progress-value {
@@ -424,149 +526,178 @@ progress::-moz-progress-bar {
   background: var(--ok);
 }
 
-.goal-ready {
-  margin: 0.6rem 0 0;
+.buy {
+  width: 100%;
+  min-height: 52px;
+  margin-top: var(--space-4);
+  font-size: 1.125rem;
+}
+
+.empty-goals {
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+#add-goal {
+  margin-top: var(--space-2);
+}
+
+/* Home: then one quiet line about spending */
+
+.spend-line {
+  margin-top: var(--space-6);
+}
+
+.headline {
+  margin: 0;
+  font-size: var(--type-heading);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* Before the first paycheck, "Log your first paycheck" opens the paycheck sheet. */
+.headline[data-opens-sheet] {
+  cursor: pointer;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.basis {
+  margin: 0;
+  font-size: var(--type-small);
+}
+
+.same-again {
+  margin-top: var(--space-4);
+}
+
+/* Behind an open sheet Home can't be used, and the paycheck sheet has its own
+   "Same as last time" chip: keep its place, but don't show two. */
+body:has(dialog[open]) .same-again {
+  visibility: hidden;
+}
+
+/* Track my spending, the backup reminder, the iPhone install help: separate objects */
+
+.card {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border-radius: var(--radius-l);
+  background: var(--card);
+}
+
+.card h2,
+.install h2 {
+  font-size: var(--type-heading);
+  font-weight: 600;
+}
+
+.spending h2 {
+  color: var(--muted);
+}
+
+.left {
+  margin: 0 0 var(--space-3);
+  font-size: var(--type-title);
   font-weight: 700;
 }
 
-.goal-card.funded .goal-ready {
-  color: var(--ok);
+.recent {
+  margin-top: var(--space-2);
 }
 
-/* "I got paid": fixed at the bottom, in the thumb zone. */
+/* "I got paid": fixed at the bottom, in the thumb zone. Messages sit right above it. */
 .paybar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
   padding:
-    1.25rem
-    calc(env(safe-area-inset-right) + 16px)
-    calc(env(safe-area-inset-bottom) + 12px)
-    calc(env(safe-area-inset-left) + 16px);
-  background: linear-gradient(to top, var(--bg) 65%, transparent);
+    var(--space-3)
+    calc(env(safe-area-inset-right) + var(--space-4))
+    calc(env(safe-area-inset-bottom) + var(--space-3))
+    calc(env(safe-area-inset-left) + var(--space-4));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
 }
 
-.paybar .big {
+.paybar > * {
+  width: 100%;
   max-width: 398px;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
 }
 
-/* Bottom sheets */
+/* The message and its button ("Undo") share one line (overnight fix P2b). */
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius-s);
+  background: var(--ok-bg);
+}
+
+.status-row:has(.result:empty) {
+  display: none;
+}
+
+.status-row .result {
+  flex: 1 1 auto;
+  margin: 0;
+  background: none;
+}
+
+.status-row .link {
+  padding: 0 var(--space-3);
+}
+
+/* Bottom sheets: a plain surface, no blur */
 
 dialog.sheet {
   width: 100%;
   max-width: min(430px, 100%);
   max-height: calc(100dvh - 24px);
   margin: auto auto 0;
-  padding: 0.5rem calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 16px);
+  padding:
+    var(--space-2)
+    calc(env(safe-area-inset-right) + var(--space-4))
+    calc(env(safe-area-inset-bottom) + var(--space-4))
+    calc(env(safe-area-inset-left) + var(--space-4));
   border: 0;
-  border-radius: 22px 22px 0 0;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
   background: var(--card);
   color: var(--text);
   overflow-y: auto;
 }
 
 dialog.sheet::backdrop {
-  background: rgb(0 0 0 / 0.5);
-}
-
-.grip {
-  width: 40px;
-  height: 5px;
-  margin: 0.25rem auto 1rem;
-  border-radius: 3px;
-  background: var(--border);
-}
-
-.pay-sentence {
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.timeline {
-  margin: 0 0 1.25rem;
-  padding-left: 1.2rem;
-}
-
-.timeline li {
-  margin: 0.3rem 0;
-}
-
-/* Goals on Home */
-
-.empty-goals {
-  margin: 1rem 0.25rem 0.75rem;
-}
-
-.wide {
-  width: 100%;
-  min-height: 52px;
-}
-
-#add-goal {
-  margin-top: 0.75rem;
-}
-
-.goal-head .icon-button {
-  margin: -0.5rem -0.5rem -0.5rem 0;
-  color: var(--muted);
-  flex: none;
-}
-
-.buy {
-  width: 100%;
-  min-height: 52px;
-  margin-top: 0.85rem;
-  font-size: 1.1rem;
-}
-
-.goal-more {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-
-.danger {
-  border: 1px solid var(--error);
-  border-radius: 14px;
-  background: var(--card);
-  color: var(--error);
-  font-weight: 600;
-}
-
-/* Settings */
-
-.app-bar .icon-button {
-  margin-right: -0.5rem;
-  color: var(--muted);
-}
-
-.notice > p {
-  margin: 0;
-}
-
-.notice > button {
-  margin-top: 0.75rem;
+  background: rgb(0 0 0 / 0.45);
 }
 
 dialog.sheet.full {
   height: calc(100dvh - 24px);
 }
 
+.grip {
+  width: 36px;
+  height: 4px;
+  margin: var(--space-1) auto var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--border);
+}
+
 .sheet-head {
   position: sticky;
-  top: -0.5rem;
+  top: calc(-1 * var(--space-2));
   z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: -0.5rem -1rem 0;
-  padding: 0.75rem 1rem 0.5rem;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-4)) 0;
+  padding: var(--space-3) var(--space-4) var(--space-2);
   background: var(--card);
   border-bottom: 1px solid var(--border);
 }
@@ -575,45 +706,158 @@ dialog.sheet.full {
   margin: 0;
 }
 
-.settings-section {
-  padding: 1.25rem 0;
+/* The paycheck result: "Nice." as a title, one sentence, then each goal's new date. */
+
+.pay-sentence {
+  margin: 0 0 var(--space-4);
+}
+
+.pay-nice {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--type-title);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0 0 var(--space-5);
+  padding: 0;
+}
+
+.timeline li {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.timeline li:last-child {
   border-bottom: 1px solid var(--border);
 }
 
-.settings-section:last-child {
-  border-bottom: 0;
+.often-title {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--type-heading);
+  font-weight: 600;
+}
+
+.often .chips {
+  margin: 0 0 var(--space-2);
+}
+
+.often-saved {
+  margin: 0 0 var(--space-3);
+  font-size: var(--type-small);
+}
+
+.often-saved:empty {
+  display: none;
+}
+
+/* Goal sheet */
+
+.goal-more {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.danger {
+  border: 1px solid var(--error);
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* Settings: sections separated by space and a hairline; a heading, one quiet line, a control */
+
+.app-bar .icon-button {
+  margin-right: calc(-1 * var(--space-2));
+  color: var(--muted);
+}
+
+.settings-section {
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--border);
+}
+
+.sheet-head + .settings-section {
+  border-top: 0;
 }
 
 .settings-section h3 {
-  font-size: 1.15rem;
-  margin-bottom: 0.4rem;
+  margin-bottom: var(--space-1);
+}
+
+.settings-section > .muted,
+.settings-section > form > .muted,
+.switch-row .muted {
+  font-size: var(--type-small);
 }
 
 .split-inputs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.6rem;
+  gap: var(--space-2);
   align-items: end; /* the boxes line up even when a label wraps (large text) */
 }
 
 .split-inputs .field {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
 .preview {
-  margin: 0.5rem 0 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background: var(--bg);
+  margin: var(--space-2) 0 var(--space-4);
 }
 
 .preview p {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--space-1);
+  font-size: var(--type-small);
 }
 
 .preview ul {
   margin: 0;
-  padding-left: 1.2rem;
+  padding-left: var(--space-5);
+}
+
+.radio-list {
+  display: grid;
+  gap: 0;
+  margin-top: var(--space-2);
+}
+
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  font-weight: 400;
+}
+
+/* The whole 44px box is the tap target; the circle drawn inside is 22px. */
+.radio-row input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: 0 0 0 calc(-1 * var(--space-3));
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--input-bg) 0 9px, var(--input-border) 9.5px 11px, transparent 11.5px);
+  cursor: pointer;
+}
+
+.radio-row input:checked {
+  background: radial-gradient(circle, var(--accent) 0 5px, var(--input-bg) 5.5px 8px, var(--accent) 8.5px 11px, transparent 11.5px);
+}
+
+.radio-row input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -2px;
 }
 
 .money-list,
@@ -626,9 +870,8 @@ dialog.sheet.full {
 .money-list li {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem 0;
+  padding: var(--space-2) 0;
   border-top: 1px solid var(--border);
-  font-variant-numeric: tabular-nums;
 }
 
 .money-list li:first-child {
@@ -636,15 +879,15 @@ dialog.sheet.full {
 }
 
 .money-list li span:last-child {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .history li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 0.75rem;
-  padding: 0.6rem 0;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) 0;
   border-top: 1px solid var(--border);
 }
 
@@ -665,12 +908,11 @@ dialog.sheet.full {
 
 .history-when {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--type-small);
 }
 
 .history-amount {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -682,59 +924,30 @@ dialog.sheet.full {
   min-height: 44px;
 }
 
-.stack {
-  display: grid;
-  gap: 0.5rem;
-}
-
-#history-toggle {
-  margin-top: 0.5rem;
-}
-
-/* Track my spending */
-
-.card {
-  margin-top: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-}
-
-.spending h2 {
-  font-size: 1.1rem;
-  color: var(--muted);
-}
-
-.left {
-  margin: 0 0 0.75rem;
-  font-size: 1.6rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.recent {
-  margin-top: 0.5rem;
+#history-toggle,
+#history-action {
+  margin-top: var(--space-2);
 }
 
 .switch-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .switch-row p {
   margin: 0;
 }
 
+/* No sliding: the knob just changes sides (docs/DESIGN.md "Motion"). */
 .switch {
   flex: none;
   position: relative;
   width: 64px;
   height: 44px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--input-border);
   padding: 0;
 }
@@ -747,7 +960,6 @@ dialog.sheet.full {
   height: 32px;
   border-radius: 50%;
   background: var(--card);
-  transition: transform 0.15s ease;
 }
 
 .switch[aria-checked="true"] {
@@ -758,204 +970,65 @@ dialog.sheet.full {
   transform: translateX(20px);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .switch .knob {
-    transition: none;
-  }
-}
-
-/* "Add to Home Screen" help (iPhone) */
-
-.install h2 {
-  font-size: 1.1rem;
-}
-
-/* Second review fixes */
-
-/* The message and its button ("Undo paycheck") share one green box, so a goal card below
-   isn't pushed under the "I got paid" bar on small phones (overnight fix P2). */
-.status-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 0.75rem;
-  border-radius: 10px;
-  background: var(--ok-bg);
-}
-
-.status-row:has(.result:empty) {
-  display: none;
-}
-
-.status-row .result {
-  flex: 1 1 auto;
-  margin: 0;
-  background: none;
-}
-
-.status-row .link {
-  padding: 0 0.6rem;
-}
-
-/* The smallest phones (320px): a slightly smaller headline leaves room for the top goal. */
-@media (max-width: 340px) {
-  .headline {
-    font-size: 1.75rem;
-  }
-
-  .headline-card {
-    padding-top: 0.75rem;
-  }
-
-  .goal-card.top {
-    padding-top: 1rem;
-  }
-}
-
-.small-notice {
-  margin: 0 0 0.75rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.95rem;
-}
-
-/* "How often do you get paid?" after the first paycheck */
-.often-title {
-  margin: 1rem 0 0.5rem;
-  font-weight: 700;
-}
-
-.often .chips {
-  margin: 0 0 0.5rem;
-}
-
-.often-saved {
-  margin: 0 0 0.75rem;
-}
-
-.often-saved:empty {
-  display: none;
-}
-
-/* "How often do you get paid?" in Settings */
-.radio-list {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.radio-row {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  min-height: 44px;
-  font-weight: 600;
-}
-
-/* The whole 44px box is the tap target; the circle drawn inside is 22px. */
-.radio-row input {
-  appearance: none;
-  -webkit-appearance: none;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  margin: 0;
-  border: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--input-bg) 0 9px, var(--input-border) 9.5px 11px, transparent 11.5px);
-  cursor: pointer;
-}
-
-.radio-row input:checked {
-  background: radial-gradient(circle, var(--accent) 0 5px, var(--input-bg) 5.5px 8px, var(--accent) 8.5px 11px, transparent 11.5px);
-}
-
-.radio-row input:focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.chip[aria-pressed="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
-}
-
-#history-action {
-  margin-top: 0.5rem;
-}
-
-.headline[data-opens-sheet] {
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-thickness: 3px;
-  text-underline-offset: 6px;
-}
-
-/* One-tap "Same as last time" on Home (lazy-v2 step 3b) */
-.same-again {
-  margin-top: 0.75rem;
-}
-
-/* Behind an open sheet Home can't be used, and the paycheck sheet has its own
-   "Same as last time" chip: keep its place, but don't show two. */
-body:has(dialog[open]) .same-again {
-  visibility: hidden;
-}
-
-/* Tap-to-explain (lazy-v2 step 3a): a number with a dotted line under it shows one sentence. */
+/* Tap-to-explain (lazy-v2 step 3a): a number with a dotted line under it shows one sentence.
+   Each one is at least a 44px tap target. */
 [data-explain] {
   cursor: pointer;
   text-decoration: underline dotted;
-  text-decoration-thickness: 2px;
+  text-decoration-color: var(--input-border);
+  text-decoration-thickness: 1px;
   text-underline-offset: 0.25em;
 }
 
-/* Each one is a 44px tap target, like every button. The padding grows the box and the same
-   negative margins give the room back, so nothing on Home moves (the 320px "Buy it" fixes
-   P2/P2b depend on that). The margins are each element's own margins minus the padding. */
-[data-explain] {
+/* On the top goal only the date carries the dotted line; the whole line is still the target. */
+.goal-card.top .goal-ready[data-explain] {
+  text-decoration: none;
+}
+
+.goal-card.top .goal-ready[data-explain] .ready-date {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--input-border);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.12em;
+}
+
+p[data-explain] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 44px;
+}
+
+/* A smaller goal's ready line flows as one sentence. */
+.goal-card:not(.top) .goal-ready[data-explain] {
+  display: block;
   padding-block: 10px;
-}
-
-.headline[data-explain] {
-  margin-block: -10px;
-}
-
-/* Two negative margins collapse to the larger one, not their sum, so the pay line takes back
-   both its own padding and the headline's (-10px) here: 0.4rem apart, as before. */
-.basis[data-explain] {
-  margin-block: calc(0.4rem - 20px) -10px;
-}
-
-.goal-amounts[data-explain] {
-  margin-block: calc(0.15rem - 10px) calc(0.6rem - 10px);
-}
-
-.goal-ready[data-explain] {
-  margin-block: calc(0.6rem - 10px) -10px;
-}
-
-.left[data-explain] {
-  margin-block: -10px calc(0.75rem - 10px);
+  min-height: 0;
 }
 
 .history-amount[data-explain] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   min-width: 44px;
-  margin-block: -10px;
-  text-align: right;
+  min-height: 44px;
 }
 
 .explain {
-  margin: 0.25rem 0 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border-left: 3px solid var(--accent);
-  border-radius: 0 8px 8px 0;
-  background: var(--input-bg);
-  font-size: 0.95rem;
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-size: var(--type-small);
+}
+
+/* The smallest phones (320px): the display size steps down so the top goal still fits. */
+@media (max-width: 340px) {
+  :root {
+    --type-display: 2rem;
+  }
 }
 
 /* The one moment of motion (docs/DESIGN.md): a goal that just became fully saved. Its line
-   rises in and the card's green tint fades. Nothing moves with reduced motion. */
+   rises in and the green tint fades. Nothing moves with reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
   .goal-card.just-funded {
     animation: funded-tint 1200ms ease-out;

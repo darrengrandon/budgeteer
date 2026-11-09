@@ -529,7 +529,10 @@ let resultPaycheck = /** @type {import('./storage.js').Paycheck | null} */ (null
 function drawPayResult() {
   if (!state || !resultPaycheck) return;
   const plan = homePlan(state, localISODate());
-  el('pay-sentence').textContent = `Nice. ${paycheckSentence(resultPaycheck.cents, paycheckParts(resultPaycheck), plan.weeklySpendCents)}`;
+  const nice = document.createElement('span');
+  nice.className = 'pay-nice';
+  nice.textContent = 'Nice.';
+  el('pay-sentence').replaceChildren(nice, ` ${paycheckSentence(resultPaycheck.cents, paycheckParts(resultPaycheck), plan.weeklySpendCents)}`);
   el('pay-timeline').replaceChildren(...plan.goals.map((g) => {
     const li = document.createElement('li');
     li.textContent = `${g.name}: ${g.line.charAt(0).toLowerCase()}${g.line.slice(1)}`;
@@ -1322,10 +1325,11 @@ function goalCard(goal, top, justFunded = false) {
 
   const ready = document.createElement('p');
   ready.className = 'goal-ready';
-  ready.textContent = goal.line;
+  writeReadyLine(ready, goal);
   setExplain(ready, `explain-${goal.id}-ready`, goal.lineExplain);
 
-  li.append(head, amounts, bar, ready);
+  // The date first: it answers "when can I buy it?" (docs/DESIGN.md).
+  li.append(head, ready, amounts, bar);
   if (goal.funded) {
     const buy = document.createElement('button');
     buy.type = 'button';
@@ -1348,6 +1352,28 @@ for (const sheet of document.querySelectorAll('dialog')) {
   sheet.addEventListener('close', () => {
     if (fundedMoment.size > 0) render();
   });
+}
+
+/**
+ * "Ready around Dec 19 (in about 7 weeks)" with the date in its own span, so the top goal can
+ * show it big. The text stays exactly the ready line.
+ * @param {HTMLElement} ready
+ * @param {import('./plan.js').GoalCard} goal
+ */
+function writeReadyLine(ready, goal) {
+  const lead = 'Ready around ';
+  if (!goal.readyDate || !goal.line.startsWith(lead + goal.readyDate)) {
+    ready.textContent = goal.line;
+    return;
+  }
+  const part = (/** @type {string} */ className, /** @type {string} */ text) => {
+    const span = document.createElement('span');
+    span.className = className;
+    span.textContent = text;
+    return span;
+  };
+  ready.append(part('ready-lead', lead), part('ready-date', goal.readyDate),
+    part('ready-weeks', goal.line.slice(lead.length + goal.readyDate.length)));
 }
 
 function render() {
