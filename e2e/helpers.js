@@ -73,7 +73,7 @@ export async function logPaycheck(page, amount) {
   if (!(await sheet.isVisible())) await page.getByRole('button', { name: 'I got paid' }).click();
   await sheet.getByLabel('Take-home amount').fill(amount);
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(sheet.getByText(/^Nice\. Your /)).toBeVisible();
+  await expect(sheet.getByText(/^From your /)).toBeVisible();
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(sheet).toBeHidden();
 }

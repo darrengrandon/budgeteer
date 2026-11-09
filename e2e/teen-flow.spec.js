@@ -19,7 +19,7 @@ test('a lazy teen names a goal, logs paychecks, buys the thing, and is nudged wh
   await first.getByLabel('Take-home amount').fill('180');
   await first.getByRole('button', { name: 'Add paycheck' }).click();
   // $180 every 2 weeks = $90 a week. Goals: 20% = $18 a week. $90 - $36 = $54 left: 3 weeks.
-  await expect(first.getByText('Nice. Your $180.00 became $90.00 to spend (about $45 a week), $54.00 saved, $36.00 for goals.')).toBeVisible();
+  await expect(first.getByText('From your $180.00: $90.00 to spend (about $45 a week), $54.00 saved, $36.00 for goals.')).toBeVisible();
   await expect(first.getByText('Concert tickets: ready around Dec 5 (in about 4 weeks)')).toBeVisible();
   await first.getByRole('button', { name: 'Done' }).click();
 

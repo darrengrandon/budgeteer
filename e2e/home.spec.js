@@ -13,7 +13,7 @@ test('first run with a goal: name it, log a paycheck, and see what to spend and 
 
   await sheet.getByLabel('Take-home amount').fill('200');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(sheet.getByText('Nice. Your $200.00 became $100.00 to spend (about $50 a week), $60.00 saved, $40.00 for goals.')).toBeVisible();
+  await expect(sheet.getByText('From your $200.00: $100.00 to spend (about $50 a week), $60.00 saved, $40.00 for goals.')).toBeVisible();
   await expect(sheet.getByText('Phone: ready around Feb 13, 2027 (in about 14 weeks)')).toBeVisible();
   await sheet.getByRole('button', { name: 'Done' }).click();
 
@@ -84,7 +84,7 @@ test('"Same as last time" fills in the last paycheck', async ({ page }) => {
   await expect(sheet.getByLabel('Take-home amount')).toHaveValue('212.40');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
   await sheet.getByRole('button', { name: 'Yes, log another' }).click(); // overnight decision 2: same amount today asks first
-  await expect(sheet.getByText('Nice. Your $212.40 became $106.20 to spend (about $106 a week), $63.72 saved, $42.48 for goals.')).toBeVisible();
+  await expect(sheet.getByText('From your $212.40: $106.20 to spend (about $106 a week), $63.72 saved, $42.48 for goals.')).toBeVisible();
 });
 
 test('Undo takes the paycheck back out', async ({ page }) => {

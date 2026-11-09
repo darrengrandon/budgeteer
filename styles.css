@@ -706,33 +706,49 @@ dialog.sheet.full {
   margin: 0;
 }
 
-/* The paycheck result: "Nice." as a title, one sentence, then each goal's new date. */
+/* The paycheck result: the payoff (each goal's new date) first, then one short line about
+   where the money went with a small Undo beside it, the optional pay question, then Done. */
 
-.pay-sentence {
-  margin: 0 0 var(--space-4);
+.timeline {
+  list-style: none;
+  margin: var(--space-2) 0 var(--space-4);
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
 }
 
-.pay-nice {
-  display: block;
-  margin-bottom: var(--space-2);
+.timeline:empty {
+  display: none;
+}
+
+.timeline li {
   font-size: var(--type-title);
   font-weight: 700;
   line-height: 1.2;
 }
 
-.timeline {
-  list-style: none;
-  margin: 0 0 var(--space-5);
-  padding: 0;
+.pay-money {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 
-.timeline li {
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--border);
+.pay-sentence {
+  flex: 1 1 auto;
+  margin: 0;
+  padding-top: var(--space-2);
+  color: var(--muted);
+  font-size: var(--type-small);
 }
 
-.timeline li:last-child {
-  border-bottom: 1px solid var(--border);
+.small-link {
+  flex: none;
+  font-size: var(--type-small);
+  padding: 0 var(--space-1) 0 var(--space-2);
+}
+
+#pay-close {
+  margin-top: var(--space-5);
 }
 
 .often-title {

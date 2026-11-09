@@ -90,10 +90,12 @@ A bottom sheet with the amount only (date is today) on the numeric keypad, and a
   more than last time ($312.47). Is $31,247.00 right?" (or "...than your recent paychecks
   (the most was $210.00)..."), and the button becomes "Yes, add $31,247.00". Comparing with
   the biggest, not just the last, keeps normal irregular pay ($40, then $175) from asking.
-After saving, the sheet shows where the money went ("Your $312.47 became $156.24 to spend
-(about $78 a week), $93.74 saved, $62.49 for goals."; the bracket is the Home headline's
-number, so there is one spend number, overnight P7) and the updated timeline for each goal, with "Done" and
-"Undo". After "Done", "Undo paycheck" stays on Home with "Paycheck added." for a while.
+After saving, the sheet leads with the payoff, each goal's new date ("AirPods: ready around
+Dec 19 (in about 6 weeks)"), then one short line about where the money went ("From your
+$312.47: $156.24 to spend (about $78 a week), $93.74 saved, $62.49 for goals."; the bracket is
+the Home headline's number, so there is one spend number, overnight P7) with a small "Undo"
+beside it, then "Done". After "Done", "Undo paycheck" stays on Home with "Paycheck added."
+for a while.
 After the very first paycheck only, it also asks "How often do you get paid?" with five
 chips: "Every week", "Every 2 weeks", "Twice a month", "Once a month", "It's different
 every time". A tap saves at once ("Saved. You can change it in Settings.") and redraws the

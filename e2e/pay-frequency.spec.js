@@ -17,7 +17,7 @@ async function firstPaycheck(page) {
   const sheet = page.locator('#pay-sheet');
   await sheet.getByLabel('Take-home amount').fill('200');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(sheet.getByText(/^Nice\. Your \$200\.00/)).toBeVisible();
+  await expect(sheet.getByText(/^From your \$200\.00/)).toBeVisible();
   return sheet;
 }
 
@@ -67,7 +67,7 @@ test('the question does not come back after the first paycheck', async ({ page }
   const sheet = page.locator('#pay-sheet');
   await sheet.getByLabel('Take-home amount').fill('180');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(sheet.getByText(/^Nice\. Your \$180\.00/)).toBeVisible();
+  await expect(sheet.getByText(/^From your \$180\.00/)).toBeVisible();
   await expect(sheet.getByRole('group', { name: 'How often do you get paid?' })).toBeHidden();
 });
 
@@ -78,7 +78,7 @@ test('people who already use the app are not asked', async ({ page }) => {
   const sheet = page.locator('#pay-sheet');
   await sheet.getByLabel('Take-home amount').fill('150');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(sheet.getByText(/^Nice\. Your \$150\.00/)).toBeVisible();
+  await expect(sheet.getByText(/^From your \$150\.00/)).toBeVisible();
   await expect(sheet.getByRole('group', { name: 'How often do you get paid?' })).toBeHidden();
   await sheet.getByRole('button', { name: 'Done' }).click();
   expect(await savedFrequency(page)).toBe('varies');

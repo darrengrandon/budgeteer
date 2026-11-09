@@ -23,7 +23,7 @@ test('P3: irregular hours: a normal $175 after a $40 week is saved without a que
   await page.getByRole('button', { name: 'I got paid' }).click();
   await page.locator('#pay-sheet').getByLabel('Take-home amount').fill('175');
   await page.getByRole('button', { name: 'Add paycheck' }).click();
-  await expect(page.getByText(/^Nice\. Your \$175\.00/)).toBeVisible();
+  await expect(page.getByText(/^From your \$175\.00/)).toBeVisible();
 });
 
 test('P2: on the smallest phone, "Buy it" is fully above the "I got paid" bar after the paycheck that funds it', async ({ page }) => {

@@ -100,13 +100,13 @@ test('L5: a paycheck 4 times the last one asks first, and Undo stays on Home aft
   await sheet.getByLabel('Take-home amount').fill('31247');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
   await expect(sheet.getByRole('alert')).toHaveText("That's a lot more than last time ($312.47). Is $31,247.00 right?");
-  await expect(sheet.getByText(/^Nice\./)).toBeHidden(); // nothing saved yet
+  await expect(sheet.getByText(/^From your /)).toBeHidden(); // nothing saved yet
   await sheet.getByLabel('Take-home amount').fill('312.47');
   await expect(sheet.getByRole('button', { name: 'Add paycheck' })).toBeVisible();
   await sheet.getByLabel('Take-home amount').fill('31247');
   await sheet.getByRole('button', { name: 'Add paycheck' }).click();
   await sheet.getByRole('button', { name: 'Yes, add $31,247.00' }).click();
-  await expect(sheet.getByText('Nice. Your $31,247.00 became')).toBeVisible();
+  await expect(sheet.getByText('From your $31,247.00:')).toBeVisible();
   await sheet.getByRole('button', { name: 'Done' }).click();
   await page.getByRole('button', { name: 'Undo paycheck' }).click();
   await expect(page.getByText('Paycheck removed.')).toBeVisible();

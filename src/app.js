@@ -529,10 +529,7 @@ let resultPaycheck = /** @type {import('./storage.js').Paycheck | null} */ (null
 function drawPayResult() {
   if (!state || !resultPaycheck) return;
   const plan = homePlan(state, localISODate());
-  const nice = document.createElement('span');
-  nice.className = 'pay-nice';
-  nice.textContent = 'Nice.';
-  el('pay-sentence').replaceChildren(nice, ` ${paycheckSentence(resultPaycheck.cents, paycheckParts(resultPaycheck), plan.weeklySpendCents)}`);
+  el('pay-sentence').textContent = paycheckSentence(resultPaycheck.cents, paycheckParts(resultPaycheck), plan.weeklySpendCents);
   el('pay-timeline').replaceChildren(...plan.goals.map((g) => {
     const li = document.createElement('li');
     li.textContent = `${g.name}: ${g.line.charAt(0).toLowerCase()}${g.line.slice(1)}`;

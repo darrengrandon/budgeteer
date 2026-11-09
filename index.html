@@ -147,8 +147,15 @@
         </div>
       </div>
     </form>
+    <!-- The payoff first: each goal's new date. Then one short line about where the money went
+         (with a small Undo beside it), the optional pay question, and Done. -->
     <div id="pay-done" hidden>
-      <p id="pay-sentence" class="pay-sentence"></p>
+      <ul id="pay-timeline" class="timeline"></ul>
+      <div class="pay-money">
+        <p id="pay-sentence" class="pay-sentence"></p>
+        <button type="button" id="pay-undo" class="link small-link">Undo</button>
+      </div>
+      <p id="pay-undo-error" class="error" role="alert"></p>
       <p id="pay-extra" class="muted" hidden></p>
       <!-- Only after the first paycheck (docs/adr/0007). A tap saves at once. -->
       <div id="pay-often" class="often" role="group" aria-labelledby="pay-often-title" hidden>
@@ -162,12 +169,7 @@
         </div>
         <p id="pay-often-saved" class="often-saved muted" role="status"></p>
       </div>
-      <ul id="pay-timeline" class="timeline"></ul>
-      <p id="pay-undo-error" class="error" role="alert"></p>
       <button type="button" id="pay-close" class="primary big">Done</button>
-      <div class="row-center">
-        <button type="button" id="pay-undo" class="link">Undo</button>
-      </div>
     </div>
   </dialog>
   <!-- One file picker for both "Restore" buttons. -->

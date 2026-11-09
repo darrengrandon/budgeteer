@@ -9,18 +9,18 @@ import {
 test('paycheckSentence says the split in plain words, exactly as in SPEC.md', () => {
   assert.equal(
     paycheckSentence(4250, { spend: 2125, save: 1275, goals: 850 }),
-    'Your $42.50 became $21.25 to spend, $12.75 saved, $8.50 for goals.',
+    'From your $42.50: $21.25 to spend, $12.75 saved, $8.50 for goals.',
   );
 });
 
 test('paycheckSentence handles big and tiny amounts', () => {
   assert.equal(
     paycheckSentence(123450, { spend: 61725, save: 37035, goals: 24690 }),
-    'Your $1,234.50 became $617.25 to spend, $370.35 saved, $246.90 for goals.',
+    'From your $1,234.50: $617.25 to spend, $370.35 saved, $246.90 for goals.',
   );
   assert.equal(
     paycheckSentence(1, { spend: 1, save: 0, goals: 0 }),
-    'Your $0.01 became $0.01 to spend, $0.00 saved, $0.00 for goals.',
+    'From your $0.01: $0.01 to spend, $0.00 saved, $0.00 for goals.',
   );
 });
 
