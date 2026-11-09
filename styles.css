@@ -189,6 +189,16 @@ button {
   padding: 0 var(--space-4);
 }
 
+/* A quiet text action in a list ("Remove", "Undo" in History): no border, still 44px. */
+.text-action {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  padding: 0 var(--space-2);
+}
+
 /* A text button for small, optional actions ("+ Add a goal"). */
 .quiet {
   border: 0;
@@ -855,12 +865,6 @@ dialog.sheet[open]:has(> #pay-done:not([hidden])) {
   margin: var(--space-3) 0 0;
 }
 
-.settings-section > .muted,
-.settings-section > form > .muted,
-.switch-row .muted {
-  font-size: var(--type-small);
-}
-
 .split-inputs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -878,7 +882,6 @@ dialog.sheet[open]:has(> #pay-done:not([hidden])) {
 
 .preview p {
   margin: 0 0 var(--space-1);
-  font-size: var(--type-small);
 }
 
 .preview ul {
@@ -946,8 +949,13 @@ dialog.sheet[open]:has(> #pay-done:not([hidden])) {
   color: var(--ok);
 }
 
-.history .secondary {
-  min-height: 44px;
+/* Settings uses one body text size throughout; color, not size, makes text quiet. */
+#settings-sheet .history-when {
+  font-size: var(--type-body);
+}
+
+.history .text-action {
+  margin-right: calc(-1 * var(--space-2));
 }
 
 #history-toggle,

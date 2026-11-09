@@ -959,7 +959,7 @@ function renderHistory() {
     amount.textContent = words.amount;
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'secondary';
+    button.className = 'text-action'; // quiet: "Remove" / "Undo" as text (lazy-v3)
     button.textContent = words.button;
     button.dataset.id = item.id;
     button.dataset.kind = item.kind;
