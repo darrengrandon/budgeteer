@@ -43,6 +43,7 @@ import {
   paycheckSentence,
   goalTimeline,
   explainActivity,
+  restoredMessage,
   PAY_FREQUENCY_LABELS,
   buySentence,
   splitTotalHint,
@@ -160,13 +161,6 @@ function downloadText(fileName, text, type) {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
-
-/**
- * "1 paycheck", "2 goal buys"
- * @param {number} n
- * @param {string} word
- */
-const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**
  * Open a sheet. Clicking the dimmed area above it closes it.
@@ -1315,9 +1309,12 @@ backupFile.addEventListener('change', async () => {
   }
   const restored = upgradeToV3(result.state);
   if (!commit(restored)) return;
-  const message = `Backup restored: ${count(restored.paychecks.length, 'paycheck')}, `
-    + `${count(restored.purchases.length, 'purchase')}, ${count(restored.goals.length, 'goal')} `
-    + `and ${count(restored.goalPurchases?.length ?? 0, 'goal buy')}.`;
+  const message = restoredMessage({
+    paychecks: restored.paychecks.length,
+    purchases: restored.purchases.length,
+    goals: restored.goals.length,
+    goalPurchases: restored.goalPurchases?.length ?? 0,
+  });
   if (firstRun) setStatus(message);
   else el('backup-result').textContent = message;
 });

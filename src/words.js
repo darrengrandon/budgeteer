@@ -409,3 +409,19 @@ export function explainGoal({ name, savedCents, targetCents, first, line, perPay
   if (line.startsWith('Should be ready')) return `${have}, and it should be there by now, so log your paycheck to check.`;
   return `${have}, and it will be ready once more pay comes in.`;
 }
+
+/**
+ * After a restore, only what the backup holds, in plain words: "Backup restored: 3 paychecks
+ * and 3 goals." Kinds with none are left out; goal buys are "bought goals" (lazy-v3).
+ * @param {{ paychecks: number, purchases: number, goals: number, goalPurchases: number }} counts
+ * @returns {string}
+ */
+export function restoredMessage({ paychecks, purchases, goals, goalPurchases }) {
+  const parts = /** @type {[number, string][]} */ ([[paychecks, 'paycheck'], [purchases, 'purchase'], [goals, 'goal'],
+    [goalPurchases, 'bought goal']])
+    .filter(([n]) => n > 0)
+    .map(([n, word]) => `${n} ${word}${n === 1 ? '' : 's'}`);
+  if (parts.length === 0) return 'Backup restored. It was empty.';
+  const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+  return `Backup restored: ${list}.`;
+}

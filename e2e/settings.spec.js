@@ -189,7 +189,7 @@ test('a downloaded backup restores on a new phone from the first screen', async 
   const chooser = phone.waitForEvent('filechooser');
   await phone.getByRole('button', { name: 'Restore a backup' }).click();
   await (await chooser).setFiles(file);
-  await expect(phone.getByText('Backup restored: 1 paycheck, 0 purchases, 1 goal and 0 goal buys.')).toBeVisible();
+  await expect(phone.getByText('Backup restored: 1 paycheck and 1 goal.')).toBeVisible();
   expect(await screen(phone)).toEqual(before);
 });
 
@@ -203,7 +203,7 @@ test('an old (version 1) backup restores with nothing lost, and tracking turns o
     goals: [{ id: 'g1', name: 'Phone', targetCents: 30000 }],
   };
   await restoreFile(page, 'old.json', JSON.stringify(old), 'Restore a backup');
-  await expect(page.getByText('Backup restored: 1 paycheck, 1 purchase, 1 goal and 0 goal buys.')).toBeVisible();
+  await expect(page.getByText('Backup restored: 1 paycheck, 1 purchase and 1 goal.')).toBeVisible();
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY);
   expect(saved.version).toBe(3);
   expect(saved.settings).toEqual({ trackSpending: true, payFrequency: 'varies' });
